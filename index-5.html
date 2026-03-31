@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formula Trompos</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#1c2128;--border:#30363d;--red:#e8001d;--red2:#ff1e37;--red-dim:rgba(232,0,29,0.15);--white:#e6edf3;--gray:#7d8590;--gray2:#484f58;--green:#00d084;--yellow:#f5c518;--blue:#388bfd;--fh:'Barlow Condensed',sans-serif;--fb:'Barlow',sans-serif;}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--white);font-family:var(--fb);min-height:100vh;}
+
+/* HEADER */
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:12px;}
+.logo-text{font-family:var(--fh);font-weight:900;font-size:20px;letter-spacing:1px;text-transform:uppercase;}
+.logo-text span{color:var(--red);}
+.hdr-right{display:flex;align-items:center;gap:10px;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:7px 16px;border-radius:6px;font-family:var(--fh);font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border:none;transition:all .15s;}
+.btn-red{background:var(--red);color:#fff;}
+.btn-red:hover{background:var(--red2);}
+.btn-ghost{background:transparent;color:var(--white);border:1px solid var(--border);}
+.btn-ghost:hover{background:var(--bg3);}
+.chip{display:flex;align-items:center;gap:7px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px 4px 6px;font-size:13px;}
+.chip-av{width:24px;height:24px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-weight:800;font-size:11px;color:#fff;text-transform:uppercase;}
+.adm{background:var(--red-dim);color:var(--red);border:1px solid rgba(232,0,29,.3);border-radius:4px;font-size:10px;font-family:var(--fh);font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:1px 5px;}
+.electrons-chip{background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:13px;font-family:var(--fh);font-weight:700;color:var(--yellow);display:flex;align-items:center;gap:5px;}
+
+/* NAV TABS */
+.nav-tabs{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 24px;display:flex;gap:4px;overflow-x:auto;}
+.nav-tab{padding:10px 16px;font-family:var(--fh);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;}
+.nav-tab:hover{color:var(--white);}
+.nav-tab.on{color:var(--white);border-bottom-color:var(--red);}
+
+/* AUTH */
+#auth-page{min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:40px 20px;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(232,0,29,.06) 0%,transparent 70%);}
+.auth-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:36px;width:100%;max-width:380px;}
+.auth-box h2{font-family:var(--fh);font-weight:900;font-size:24px;text-transform:uppercase;margin-bottom:4px;}
+.auth-box h2 span{color:var(--red);}
+.auth-box p{color:var(--gray);font-size:13px;margin-bottom:22px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-family:var(--fh);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:4px;}
+.field input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--white);font-family:var(--fb);font-size:14px;outline:none;transition:border-color .15s;}
+.field input:focus{border-color:var(--red);}
+.err{color:var(--red);font-size:12px;padding:7px 10px;background:rgba(232,0,29,.1);border:1px solid rgba(232,0,29,.3);border-radius:6px;margin-top:7px;display:none;}
+.ok{color:var(--green);font-size:12px;padding:7px 10px;background:rgba(0,208,132,.1);border:1px solid rgba(0,208,132,.3);border-radius:6px;margin-top:7px;display:none;}
+.switch{text-align:center;margin-top:14px;font-size:13px;color:var(--gray);}
+.switch a{color:var(--red);cursor:pointer;font-weight:600;}
+
+/* APP */
+#app-page{display:none;}
+#app-page.vis{display:grid;grid-template-columns:220px 1fr 300px;min-height:calc(100vh - 96px);}
+
+/* SIDEBAR */
+.sidebar{border-right:1px solid var(--border);padding:16px 12px;}
+.sb-label{font-family:var(--fh);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--gray2);margin-bottom:6px;padding-left:6px;margin-top:16px;}
+.sb-label:first-child{margin-top:0;}
+.sb-item{display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:6px;font-size:13px;color:var(--gray);cursor:pointer;border:none;background:none;width:100%;text-align:left;margin-bottom:1px;transition:all .12s;}
+.sb-item:hover{background:var(--bg3);color:var(--white);}
+.sb-item.on{background:rgba(56,139,253,0.1);color:var(--blue);}
+.sb-count{margin-left:auto;background:var(--bg3);padding:1px 6px;border-radius:8px;font-size:11px;font-family:var(--fh);font-weight:700;}
+
+/* FEED */
+.feed{padding:20px;border-right:1px solid var(--border);overflow-y:auto;}
+.feed-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.feed-title{font-family:var(--fh);font-weight:800;font-size:22px;text-transform:uppercase;}
+.searchbar{display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 12px;gap:7px;margin-bottom:14px;}
+.searchbar input{border:none;background:none;color:var(--white);font-family:var(--fb);font-size:13px;outline:none;flex:1;}
+.tabs{display:flex;gap:5px;margin-bottom:16px;flex-wrap:wrap;}
+.tab{padding:4px 12px;border-radius:16px;font-family:var(--fh);font-size:12px;font-weight:700;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--gray);transition:all .15s;}
+.tab:hover{color:var(--white);}
+.tab.on{background:var(--red);color:#fff;border-color:var(--red);}
+.qlist{display:flex;flex-direction:column;gap:10px;}
+
+/* QUESTION CARDS */
+.qcard{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:all .2s;cursor:pointer;}
+.qcard:hover{border-color:var(--gray2);}
+.qcard.closed{opacity:.65;}
+.qcard-top{padding:16px 16px 12px;}
+.qcard-head{display:flex;gap:10px;margin-bottom:10px;}
+.qcard-icon{width:36px;height:36px;border-radius:6px;background:var(--red-dim);border:1px solid rgba(232,0,29,.3);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.qcard-cat{font-family:var(--fh);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:2px;}
+.qcard-title{font-family:var(--fh);font-weight:700;font-size:17px;line-height:1.2;color:var(--white);}
+.qcard-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--gray);margin-top:6px;flex-wrap:wrap;}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-family:var(--fh);font-size:10px;font-weight:700;text-transform:uppercase;}
+.badge-live{background:rgba(0,208,132,.12);color:var(--green);border:1px solid rgba(0,208,132,.25);}
+.badge-closed{background:rgba(136,136,136,.12);color:var(--gray);border:1px solid var(--border);}
+
+/* CHART AREA */
+.chart-area{padding:0 16px 12px;position:relative;height:120px;}
+.chart-area canvas{width:100%!important;}
+.chart-legend{display:flex;gap:8px;padding:0 16px 8px;flex-wrap:wrap;}
+.chart-leg-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--gray);}
+.chart-leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.chart-pct{font-family:var(--fh);font-weight:800;font-size:13px;}
+
+/* OPTIONS */
+.opts-area{padding:0 16px 14px;display:flex;flex-direction:column;gap:6px;}
+.opt{position:relative;border-radius:6px;overflow:hidden;}
+.opt.clickable{cursor:pointer;}
+.opt-bar{position:absolute;top:0;left:0;bottom:0;transition:width .5s;}
+.opt-inner{position:relative;display:flex;align-items:center;justify-content:space-between;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);z-index:1;transition:border-color .15s;}
+.opt.clickable:hover .opt-inner{border-color:var(--blue);}
+.opt.myvote .opt-inner{border-color:var(--red);background:rgba(232,0,29,.07);}
+.opt-label{font-size:13px;font-weight:500;display:flex;align-items:center;gap:6px;}
+.opt-check{display:none;color:var(--red);}
+.opt.myvote .opt-check{display:inline;}
+.opt-right{display:flex;align-items:center;gap:8px;}
+.opt-pct{font-family:var(--fh);font-weight:800;font-size:14px;}
+.opt-e{font-size:11px;color:var(--gray);}
+
+/* CARD FOOTER */
+.qcard-footer{padding:10px 16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.2);}
+.qcard-vol{font-size:12px;color:var(--gray);display:flex;align-items:center;gap:4px;}
+.qcard-actions{display:flex;gap:6px;}
+
+/* RIGHT PANEL */
+.rpanel{padding:20px;}
+.rp-title{font-family:var(--fh);font-weight:800;font-size:16px;text-transform:uppercase;margin-bottom:14px;}
+.lb-row{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:7px;margin-bottom:4px;background:var(--bg2);border:1px solid var(--border);}
+.lb-row.r1{border-color:rgba(245,197,24,.35);background:rgba(245,197,24,.04);}
+.lb-row.r2{border-color:rgba(192,192,192,.25);}
+.lb-row.r3{border-color:rgba(205,127,50,.25);}
+.lb-rank{font-family:var(--fh);font-weight:800;font-size:14px;width:20px;text-align:center;color:var(--gray);}
+.r1 .lb-rank{color:var(--yellow);}.r2 .lb-rank{color:#c0c0c0;}.r3 .lb-rank{color:#cd7f32;}
+.lb-name{flex:1;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lb-v{font-family:var(--fh);font-weight:700;font-size:12px;color:var(--yellow);}
+.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px;}
+.stat-label{font-family:var(--fh);font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;}
+.stat-val{font-family:var(--fh);font-size:24px;font-weight:900;}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);}
+.overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:28px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;}
+.modal-title{font-family:var(--fh);font-weight:800;font-size:19px;text-transform:uppercase;}
+.xbtn{background:var(--bg3);border:1px solid var(--border);color:var(--gray);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:15px;}
+.xbtn:hover{color:var(--white);}
+.optbuilder{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.optrow{display:flex;gap:6px;align-items:center;}
+.optrow input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 11px;color:var(--white);font-family:var(--fb);font-size:13px;outline:none;}
+.optrow input:focus{border-color:var(--red);}
+.rmbtn{width:32px;height:32px;border-radius:6px;background:var(--bg3);border:1px solid var(--border);color:var(--gray);cursor:pointer;font-size:14px;flex-shrink:0;}
+.rmbtn:hover{color:var(--red);border-color:var(--red);}
+select{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 11px;color:var(--white);font-family:var(--fb);font-size:13px;outline:none;}
+select option{background:var(--bg3);}
+
+/* TOAST */
+.toasts{position:fixed;bottom:20px;right:20px;z-index:999;display:flex;flex-direction:column;gap:6px;}
+.toast{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;align-items:center;gap:7px;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:200px;transition:opacity .3s;}
+.toast.s{border-color:rgba(0,208,132,.4);}
+.toast.s::before{content:'✓';color:var(--green);font-weight:800;}
+.toast.e{border-color:rgba(232,0,29,.4);}
+.toast.e::before{content:'✕';color:var(--red);font-weight:800;}
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+.empty{text-align:center;padding:50px 20px;color:var(--gray);}
+.empty .ico{font-size:40px;margin-bottom:10px;}
+.empty h3{font-family:var(--fh);font-size:17px;font-weight:700;text-transform:uppercase;color:var(--white);margin-bottom:5px;}
+hr.div{border:none;border-top:1px solid var(--border);margin:14px 0;}
+@media(max-width:1100px){#app-page.vis{grid-template-columns:1fr!important;}.sidebar,.rpanel{display:none;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg width="32" height="32" viewBox="0 0 100 100"><path d="M10 18L10 82L25 82L25 57L50 57L50 46L25 46L25 32L60 32L60 18Z" fill="#e8001d"/><path d="M58 18L58 82L72 82L72 18Z" fill="#e8001d"/><path d="M58 18L92 18L92 30L72 30L72 18Z" fill="#e8001d"/></svg>
+    <div class="logo-text">Formula <span>Trompos</span></div>
+  </div>
+  <div class="hdr-right" id="hdr-right"></div>
+</header>
+
+<div class="nav-tabs" id="nav-tabs" style="display:none">
+  <button class="nav-tab on" data-cat="all">🏁 All</button>
+  <button class="nav-tab" data-cat="Race Results">🏆 Race Results</button>
+  <button class="nav-tab" data-cat="Qualifying">⏱️ Qualifying</button>
+  <button class="nav-tab" data-cat="Race Events">🚨 Race Events</button>
+  <button class="nav-tab" data-cat="Championship">🥇 Championship</button>
+</div>
+
+<!-- AUTH -->
+<div id="auth-page">
+  <div class="auth-box">
+    <div id="frm-login">
+      <h2>Welcome to <span>Trompos</span></h2>
+      <p>Log in to place your predictions and compete.</p>
+      <div class="field"><label>Email</label><input type="email" id="l-email" placeholder="your@email.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="l-pw" placeholder="••••••••"></div>
+      <div id="l-err" class="err"></div>
+      <button class="btn btn-red" id="btn-login" style="width:100%;margin-top:10px">Log In</button>
+      <div class="switch">No account? <a id="go-reg">Sign up</a></div>
+    </div>
+    <div id="frm-reg" style="display:none">
+      <h2>Join <span>Trompos</span></h2>
+      <p>Create your account to start predicting.</p>
+      <div class="field"><label>Name</label><input type="text" id="r-name" placeholder="Your name"></div>
+      <div class="field"><label>Email</label><input type="email" id="r-email" placeholder="your@email.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="r-pw" placeholder="Min 6 characters"></div>
+      <div id="r-err" class="err"></div>
+      <div id="r-ok" class="ok">✓ Account created! You can now log in.</div>
+      <button class="btn btn-red" id="btn-reg" style="width:100%;margin-top:10px">Create Account</button>
+      <div class="switch">Have an account? <a id="go-login">Log in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app-page">
+  <aside class="sidebar">
+    <div class="sb-label">Markets</div>
+    <button class="sb-item on" data-cat="all">🏁 All <span class="sb-count" id="cnt-all">0</span></button>
+    <button class="sb-item" data-cat="Race Results">🏆 Race Results <span class="sb-count" id="cnt-race">0</span></button>
+    <button class="sb-item" data-cat="Qualifying">⏱️ Qualifying <span class="sb-count" id="cnt-qual">0</span></button>
+    <button class="sb-item" data-cat="Race Events">🚨 Race Events <span class="sb-count" id="cnt-ev">0</span></button>
+    <button class="sb-item" data-cat="Championship">🥇 Championship <span class="sb-count" id="cnt-ch">0</span></button>
+    <div class="sb-label">Status</div>
+    <button class="sb-item" data-status="open">🟢 Open</button>
+    <button class="sb-item" data-status="closed">🔴 Closed</button>
+  </aside>
+
+  <main class="feed">
+    <div class="feed-header">
+      <div class="feed-title">🏎 Predictions</div>
+    </div>
+    <div class="searchbar">🔍 <input type="text" id="search" placeholder="Search predictions..."></div>
+    <div class="tabs">
+      <button class="tab on" data-tab="newest">✨ Newest</button>
+      <button class="tab" data-tab="most-voted">⚡ Most Active</button>
+      <button class="tab" data-tab="mine">👤 My Votes</button>
+    </div>
+    <div id="qlist" class="qlist"><div class="empty"><div class="ico">🏎️</div><h3>Loading...</h3></div></div>
+  </main>
+
+  <aside class="rpanel">
+    <div class="rp-title">🏆 Leaderboard</div>
+    <div id="lb-list"></div>
+    <hr class="div">
+    <div class="rp-title" style="font-size:13px">⚡ Stats</div>
+    <div class="stat-box"><div class="stat-label">Total Questions</div><div id="s-total" class="stat-val">0</div></div>
+    <div class="stat-box"><div class="stat-label">Total Electrons Spent</div><div id="s-votes" class="stat-val" style="color:var(--yellow)">0 ⚡</div></div>
+  </aside>
+</div>
+
+<!-- NEW QUESTION MODAL -->
+<div id="modal" class="overlay">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">+ New Question</div>
+      <button class="xbtn" id="btn-close-modal">✕</button>
+    </div>
+    <div class="field"><label>Question</label><input type="text" id="q-title" placeholder="e.g. Who wins Monaco GP?"></div>
+    <div class="field"><label>Category</label>
+      <select id="q-cat">
+        <option value="Race Results">Race Results</option>
+        <option value="Qualifying">Qualifying</option>
+        <option value="Race Events">Race Events</option>
+        <option value="Championship">Championship</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Options</label>
+      <div id="optbuilder" class="optbuilder">
+        <div class="optrow"><input type="text" class="oi" placeholder="Option 1"><button class="rmbtn">✕</button></div>
+        <div class="optrow"><input type="text" class="oi" placeholder="Option 2"><button class="rmbtn">✕</button></div>
+      </div>
+      <button class="btn btn-ghost" id="btn-add-opt" style="width:100%;margin-top:4px">+ Add Option</button>
+    </div>
+    <div id="q-err" class="err"></div>
+    <button class="btn btn-red" id="btn-publish" style="width:100%;margin-top:12px">Publish Question</button>
+  </div>
+</div>
+
+<div id="toasts" class="toasts"></div>
+
+<script>
+var SB = supabase.createClient(
+  'https://rciftwesvujghmefjnhg.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjaWZ0d2VzdnVqZ2htZWZqbmhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDYxODUsImV4cCI6MjA5MDI4MjE4NX0.isIUPb4PuO5u08fK6Ix9Rz0CF_b3nfga9ZerhPsIMqs'
+);
+
+var ME=null, ADMIN=false, QS=[], RT=null;
+var F={cat:'all',status:null,tab:'newest',q:''};
+var CHARTS={};
+
+// Chart color palette
+var COLORS=['#388bfd','#e8001d','#00d084','#f5c518','#a371f7','#f78166','#56d364','#79c0ff'];
+
+function toast(msg,type){
+  var c=document.getElementById('toasts'),t=document.createElement('div');
+  t.className='toast '+(type||'s');t.textContent=msg;c.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';setTimeout(function(){if(t.parentNode)t.remove();},300);},3000);
+}
+
+// ── AUTH ──────────────────────────────────────────
+document.getElementById('btn-login').onclick=async function(){
+  var email=document.getElementById('l-email').value.trim();
+  var pw=document.getElementById('l-pw').value;
+  var err=document.getElementById('l-err');
+  err.style.display='none';
+  if(!email||!pw){err.textContent='Please fill in all fields.';err.style.display='block';return;}
+  this.innerHTML='<span class="spin"></span> Logging in...';this.disabled=true;
+  var r=await SB.auth.signInWithPassword({email:email,password:pw});
+  if(r.error){err.textContent=r.error.message;err.style.display='block';this.textContent='Log In';this.disabled=false;return;}
+  window.location.reload();
+};
+
+document.getElementById('btn-reg').onclick=async function(){
+  var name=document.getElementById('r-name').value.trim();
+  var email=document.getElementById('r-email').value.trim();
+  var pw=document.getElementById('r-pw').value;
+  var err=document.getElementById('r-err'),ok=document.getElementById('r-ok');
+  err.style.display='none';ok.style.display='none';
+  if(!name||!email||pw.length<6){err.textContent='Fill all fields (password min 6 chars).';err.style.display='block';return;}
+  this.innerHTML='<span class="spin"></span>';this.disabled=true;
+  var r=await SB.auth.signUp({email:email,password:pw,options:{data:{name:name}}});
+  this.textContent='Create Account';this.disabled=false;
+  if(r.error){err.textContent=r.error.message;err.style.display='block';return;}
+  ok.style.display='block';
+};
+
+document.getElementById('go-reg').onclick=function(){document.getElementById('frm-login').style.display='none';document.getElementById('frm-reg').style.display='block';};
+document.getElementById('go-login').onclick=function(){document.getElementById('frm-reg').style.display='none';document.getElementById('frm-login').style.display='block';};
+document.getElementById('l-pw').onkeydown=function(e){if(e.key==='Enter')document.getElementById('btn-login').onclick();};
+
+// ── SHOW APP ──────────────────────────────────────
+function showApp(){
+  document.getElementById('auth-page').style.display='none';
+  document.getElementById('app-page').classList.add('vis');
+  document.getElementById('app-page').style.display='grid';
+  document.getElementById('nav-tabs').style.display='flex';
+  var name=(ME.user_metadata&&ME.user_metadata.name)?ME.user_metadata.name:ME.email;
+  var totalE=QS.reduce(function(s,q){return s+tv(q);},0);
+  document.getElementById('hdr-right').innerHTML=
+    '<div class="electrons-chip">⚡ '+totalE+' e-</div>'
+    +'<div class="chip"><div class="chip-av">'+name[0].toUpperCase()+'</div><span>'+name+'</span>'+(ADMIN?'<span class="adm">Admin</span>':'')+'</div>'
+    +(ADMIN?'<button class="btn btn-red" id="btn-new">+ New Question</button>':'')
+    +'<button class="btn btn-ghost" id="btn-logout">Log Out</button>';
+  document.getElementById('btn-logout').onclick=async function(){await SB.auth.signOut();window.location.reload();};
+  if(ADMIN)document.getElementById('btn-new').onclick=function(){document.getElementById('modal').classList.add('open');};
+  loadQuestions();
+}
+
+// ── QUESTIONS ─────────────────────────────────────
+async function loadQuestions(){
+  var r=await SB.from('questions').select('*').order('created_at',{ascending:false});
+  if(r.error){toast('Error loading','e');return;}
+  QS=r.data||[];renderAll();
+  if(RT)SB.removeChannel(RT);
+  RT=SB.channel('qch').on('postgres_changes',{event:'*',schema:'public',table:'questions'},async function(){
+    var r2=await SB.from('questions').select('*').order('created_at',{ascending:false});
+    if(!r2.error){QS=r2.data||[];renderAll();}
+  }).subscribe();
+}
+
+function tv(q){return Object.values(q.votes||{}).reduce(function(a,b){return a+b;},0);}
+
+function renderAll(){renderQ();renderSB();renderStats();renderLB();updateElectronsDisplay();}
+
+function updateElectronsDisplay(){
+  var ec=document.getElementById('hdr-right');
+  if(!ec)return;
+  var totalE=QS.reduce(function(s,q){return s+tv(q);},0);
+  var chip=ec.querySelector('.electrons-chip');
+  if(chip)chip.textContent='⚡ '+totalE+' e-';
+}
+
+// Build sparkline data for a question (simulate history from current votes)
+function buildChartData(q){
+  var opts=q.options||[];
+  var tot=tv(q);
+  if(tot===0||opts.length===0)return null;
+  // Generate simulated historical data points (6 points ending at current %)
+  var datasets=[];
+  opts.forEach(function(opt,i){
+    var finalPct=tot>0?Math.round((((q.votes&&q.votes[opt])||0)/tot)*100):0;
+    // Simulate a plausible history
+    var pts=[];
+    var base=Math.round(100/opts.length);
+    for(var j=0;j<7;j++){
+      var noise=(Math.random()-0.5)*20;
+      var prog=j/6;
+      var val=Math.round(base+(finalPct-base)*prog+noise*(1-prog));
+      val=Math.max(0,Math.min(100,val));
+      pts.push(val);
+    }
+    pts[6]=finalPct; // end at real value
+    datasets.push({
+      label:opt,
+      data:pts,
+      borderColor:COLORS[i%COLORS.length],
+      backgroundColor:'transparent',
+      borderWidth:2,
+      pointRadius:0,
+      pointHoverRadius:3,
+      tension:0.4
+    });
+  });
+  return datasets;
+}
+
+function renderQ(){
+  var qs=QS.slice();
+  if(F.cat!=='all')qs=qs.filter(function(q){return q.category===F.cat;});
+  if(F.status==='open')qs=qs.filter(function(q){return !q.closed;});
+  if(F.status==='closed')qs=qs.filter(function(q){return q.closed;});
+  if(F.q){var s=F.q.toLowerCase();qs=qs.filter(function(q){return q.title.toLowerCase().indexOf(s)>-1;});}
+  if(F.tab==='most-voted')qs.sort(function(a,b){return tv(b)-tv(a);});
+  if(F.tab==='mine')qs=qs.filter(function(q){return ME&&q.user_votes&&q.user_votes[ME.id];});
+
+  var el=document.getElementById('qlist');
+  if(!qs.length){el.innerHTML='<div class="empty"><div class="ico">🏎️</div><h3>No questions yet</h3></div>';return;}
+  var icons={'Race Results':'🏆','Qualifying':'⏱️','Race Events':'🚨','Championship':'🥇'};
+
+  // Destroy old charts
+  Object.keys(CHARTS).forEach(function(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}});
+
+  el.innerHTML=qs.map(function(q){
+    var tot=tv(q),myv=ME&&q.user_votes?q.user_votes[ME.id]:null,canv=!q.closed&&!myv;
+    var leadOpt=null,leadPct=0;
+    (q.options||[]).forEach(function(o){var p=tot>0?Math.round((((q.votes&&q.votes[o])||0)/tot)*100):0;if(p>leadPct){leadPct=p;leadOpt=o;}});
+
+    var opts=(q.options||[]).map(function(o,i){
+      var cnt=(q.votes&&q.votes[o])||0,pct=tot>0?Math.round((cnt/tot)*100):0;
+      var barColor=COLORS[i%COLORS.length];
+      return '<div class="opt'+(myv===o?' myvote':'')+(canv?' clickable':'')+'" data-qid="'+q.id+'" data-opt="'+o.replace(/"/g,'&quot;')+'">'
+        +'<div class="opt-bar" style="width:'+pct+'%;background:'+barColor+'22"></div>'
+        +'<div class="opt-inner">'
+        +'<span class="opt-label" style="'+(myv===o?'color:var(--red)':'')+'"><span class="opt-check">✓</span>'+o+'</span>'
+        +'<span class="opt-right">'
+        +'<span class="opt-e">'+cnt+' ⚡</span>'
+        +'<span class="opt-pct" style="color:'+barColor+'">'+pct+'%</span>'
+        +'</span></div></div>';
+    }).join('');
+
+    var cb=ADMIN
+      ?'<div class="qcard-actions">'+(!q.closed?'<button class="btn btn-ghost close-q" data-qid="'+q.id+'" style="font-size:11px;padding:4px 10px;color:var(--gray)">🔒 Close</button>':'')
+        +'<button class="btn btn-ghost del-q" data-qid="'+q.id+'" style="font-size:11px;padding:4px 10px;color:var(--red);border-color:var(--red)">🗑 Delete</button></div>'
+      :'';
+
+    return '<div class="qcard'+(q.closed?' closed':'')+'">'
+      +'<div class="qcard-top">'
+      +'<div class="qcard-head"><div class="qcard-icon">'+(icons[q.category]||'🏁')+'</div>'
+      +'<div><div class="qcard-cat">'+q.category+'</div>'
+      +'<div class="qcard-title">'+q.title+'</div>'
+      +'<div class="qcard-meta">'
+      +'<span class="badge '+(q.closed?'badge-closed':'badge-live')+'">'+(q.closed?'🔒 Closed':'🟢 Live')+'</span>'
+      +'<span>'+tot+' ⚡ electrons</span>'
+      +(myv?'<span style="color:var(--red)">✓ Your pick: '+myv+'</span>':'')
+      +(!myv&&!q.closed?'<span style="color:var(--blue)">Click to vote</span>':'')
+      +'</div></div></div>'
+      +'</div>'
+      +'<div class="chart-area"><canvas id="chart-'+q.id+'"></canvas></div>'
+      +'<div class="chart-legend" id="legend-'+q.id+'"></div>'
+      +'<div class="opts-area">'+opts+'</div>'
+      +'<div class="qcard-footer">'
+      +'<div class="qcard-vol">⚡ '+tot+' electrons cast'+(leadOpt?'&nbsp;&nbsp;<span style="color:var(--green)">▲ '+leadOpt+' '+leadPct+'%</span>':'')+'</div>'
+      +cb
+      +'</div>'
+      +'</div>';
+  }).join('');
+
+  // Wire vote/close/delete clicks
+  el.querySelectorAll('.opt.clickable').forEach(function(o){o.onclick=function(){castVote(this.dataset.qid,this.dataset.opt);};});
+  el.querySelectorAll('.close-q').forEach(function(b){b.onclick=function(e){e.stopPropagation();closeQ(this.dataset.qid);};});
+  el.querySelectorAll('.del-q').forEach(function(b){b.onclick=function(e){e.stopPropagation();deleteQ(this.dataset.qid);};});
+
+  // Draw charts
+  qs.forEach(function(q){
+    var canvas=document.getElementById('chart-'+q.id);
+    if(!canvas)return;
+    var datasets=buildChartData(q);
+    if(!datasets)return;
+    var labels=['','','','','','','Now'];
+    CHARTS[q.id]=new Chart(canvas,{
+      type:'line',
+      data:{labels:labels,datasets:datasets},
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        interaction:{mode:'index',intersect:false},
+        plugins:{
+          legend:{display:false},
+          tooltip:{
+            backgroundColor:'rgba(22,27,34,0.95)',
+            borderColor:'#30363d',
+            borderWidth:1,
+            titleColor:'#e6edf3',
+            bodyColor:'#7d8590',
+            callbacks:{
+              label:function(ctx){return ctx.dataset.label+': '+ctx.raw+'%';}
+            }
+          }
+        },
+        scales:{
+          x:{display:false},
+          y:{display:false,min:0,max:100}
+        },
+        animation:{duration:600}
+      }
+    });
+
+    // Build legend
+    var leg=document.getElementById('legend-'+q.id);
+    if(leg){
+      leg.innerHTML=datasets.map(function(d,i){
+        return '<div class="chart-leg-item"><div class="chart-leg-dot" style="background:'+d.borderColor+'"></div><span>'+d.label+'</span><span class="chart-pct" style="color:'+d.borderColor+'">'+d.data[6]+'%</span></div>';
+      }).join('');
+    }
+  });
+}
+
+function renderSB(){
+  var c={'Race Results':0,'Qualifying':0,'Race Events':0,'Championship':0};
+  QS.forEach(function(q){if(c[q.category]!==undefined)c[q.category]++;});
+  document.getElementById('cnt-all').textContent=QS.length;
+  document.getElementById('cnt-race').textContent=c['Race Results'];
+  document.getElementById('cnt-qual').textContent=c['Qualifying'];
+  document.getElementById('cnt-ev').textContent=c['Race Events'];
+  document.getElementById('cnt-ch').textContent=c['Championship'];
+}
+function renderStats(){
+  var tot=QS.reduce(function(s,q){return s+tv(q);},0);
+  document.getElementById('s-total').textContent=QS.length;
+  document.getElementById('s-votes').textContent=tot+' ⚡';
+}
+function renderLB(){
+  var c={};
+  QS.forEach(function(q){Object.keys(q.user_votes||{}).forEach(function(uid){if(!c[uid])c[uid]={uid:uid,n:0};c[uid].n++;});});
+  var s=Object.values(c).sort(function(a,b){return b.n-a.n;}).slice(0,8);
+  var el=document.getElementById('lb-list');
+  if(!s.length){el.innerHTML='<div style="color:var(--gray);font-size:12px;text-align:center;padding:14px">No votes yet</div>';return;}
+  el.innerHTML=s.map(function(u,i){
+    var r=i+1,cls=r===1?'r1':r===2?'r2':r===3?'r3':'';
+    var medal=r===1?'🥇':r===2?'🥈':r===3?'🥉':r;
+    var nm=u.uid.length>20?u.uid.slice(0,8)+'…':u.uid;
+    return '<div class="lb-row '+cls+'"><div class="lb-rank">'+medal+'</div><div class="lb-name">'+nm+'</div><div class="lb-v">'+u.n+' ⚡</div></div>';
+  }).join('');
+}
+
+async function castVote(qid,opt){
+  var q=QS.find(function(x){return x.id===qid;});
+  if(!q||!ME)return;
+  if(q.user_votes&&q.user_votes[ME.id]){toast('Already voted!','e');return;}
+  var nv=Object.assign({},q.votes||{});nv[opt]=(nv[opt]||0)+1;
+  var nuv=Object.assign({},q.user_votes||{});nuv[ME.id]=opt;
+  var r=await SB.from('questions').update({votes:nv,user_votes:nuv}).eq('id',qid);
+  if(r.error){toast('Error voting','e');return;}
+  toast('⚡ Electron cast: '+opt,'s');
+}
+
+async function closeQ(qid){
+  if(!confirm('Close this question?'))return;
+  var r=await SB.from('questions').update({closed:true}).eq('id',qid);
+  if(r.error){toast('Error','e');return;}
+  toast('Question closed','s');
+}
+
+async function deleteQ(qid){
+  if(!confirm('Delete this question permanently?'))return;
+  var r=await SB.from('questions').delete().eq('id',qid);
+  if(r.error){toast('Error deleting','e');return;}
+  toast('Question deleted','s');
+}
+
+// ── MODAL ─────────────────────────────────────────
+document.getElementById('btn-close-modal').onclick=function(){document.getElementById('modal').classList.remove('open');};
+document.getElementById('modal').onclick=function(e){if(e.target===this)this.classList.remove('open');};
+document.getElementById('btn-add-opt').onclick=function(){
+  var b=document.getElementById('optbuilder');
+  var row=document.createElement('div');row.className='optrow';
+  row.innerHTML='<input type="text" class="oi" placeholder="Option '+(b.children.length+1)+'"><button class="rmbtn">✕</button>';
+  b.appendChild(row);
+  row.querySelector('.rmbtn').onclick=function(){if(b.children.length>2)row.remove();else toast('Min 2 options','e');};
+};
+document.querySelectorAll('.rmbtn').forEach(function(b){
+  b.onclick=function(){var ob=document.getElementById('optbuilder');if(ob.children.length>2)b.closest('.optrow').remove();else toast('Min 2 options','e');};
+});
+document.getElementById('btn-publish').onclick=async function(){
+  var title=document.getElementById('q-title').value.trim();
+  var cat=document.getElementById('q-cat').value;
+  var opts=[].slice.call(document.querySelectorAll('.oi')).map(function(i){return i.value.trim();}).filter(Boolean);
+  var err=document.getElementById('q-err');err.style.display='none';
+  if(!title){err.textContent='Please enter a title.';err.style.display='block';return;}
+  if(opts.length<2){err.textContent='Need at least 2 options.';err.style.display='block';return;}
+  this.innerHTML='<span class="spin"></span> Publishing...';this.disabled=true;
+  var votes={};opts.forEach(function(o){votes[o]=0;});
+  var r=await SB.from('questions').insert({title:title,category:cat,options:opts,votes:votes,user_votes:{},closed:false});
+  this.textContent='Publish Question';this.disabled=false;
+  if(r.error){err.textContent=r.error.message;err.style.display='block';return;}
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('q-title').value='';
+  document.getElementById('optbuilder').innerHTML='<div class="optrow"><input type="text" class="oi" placeholder="Option 1"><button class="rmbtn">✕</button></div><div class="optrow"><input type="text" class="oi" placeholder="Option 2"><button class="rmbtn">✕</button></div>';
+  toast('Question published! 🏁','s');
+};
+
+// ── FILTERS ───────────────────────────────────────
+document.querySelectorAll('[data-cat]').forEach(function(b){
+  b.onclick=function(){
+    F.cat=this.dataset.cat;F.status=null;
+    document.querySelectorAll('[data-cat]').forEach(function(x){x.classList.remove('on');});
+    document.querySelectorAll('[data-cat="'+F.cat+'"]').forEach(function(x){x.classList.add('on');});
+    renderQ();
+  };
+});
+document.querySelectorAll('[data-status]').forEach(function(b){
+  b.onclick=function(){
+    var s=this.dataset.status;F.status=F.status===s?null:s;
+    document.querySelectorAll('[data-status]').forEach(function(x){x.classList.remove('on');});
+    if(F.status)this.classList.add('on');renderQ();
+  };
+});
+document.querySelectorAll('[data-tab]').forEach(function(b){
+  b.onclick=function(){
+    F.tab=this.dataset.tab;
+    document.querySelectorAll('[data-tab]').forEach(function(x){x.classList.remove('on');});
+    this.classList.add('on');renderQ();
+  };
+});
+document.getElementById('search').oninput=function(){F.q=this.value;renderQ();};
+
+// ── BOOT ──────────────────────────────────────────
+(async function(){
+  var r=await SB.auth.getSession();
+  if(r.data&&r.data.session&&r.data.session.user){
+    ME=r.data.session.user;ADMIN=false;
+    try{
+      var pr=await Promise.race([
+        SB.from('profiles').select('is_admin,name').eq('id',ME.id).single(),
+        new Promise(function(res){setTimeout(function(){res({data:null});},3000);})
+      ]);
+      if(pr.data){ADMIN=!!pr.data.is_admin;if(pr.data.name){ME.user_metadata=ME.user_metadata||{};ME.user_metadata.name=pr.data.name;}}
+    }catch(e){}
+    showApp();
+  }
+})();
+</script>
+</body>
+</html>
