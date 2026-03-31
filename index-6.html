@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Formula Trompos</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800;900&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --bg:#0d1117;--bg2:#161b22;--bg3:#1c2128;--border:#30363d;
+  --red:#e8001d;--red2:#ff1e37;--red-dim:rgba(232,0,29,0.15);
+  --white:#e6edf3;--gray:#7d8590;--gray2:#484f58;
+  --green:#00d084;--yellow:#f5c518;--blue:#388bfd;--purple:#a371f7;
+  --fh:'Barlow Condensed',sans-serif;--fb:'Barlow',sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--white);font-family:var(--fb);min-height:100vh;}
+
+header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;height:56px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100;}
+.logo{display:flex;align-items:center;gap:10px;}
+.logo-text{font-family:var(--fh);font-weight:900;font-size:20px;letter-spacing:1px;text-transform:uppercase;}
+.logo-text span{color:var(--red);}
+.hdr-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:5px;padding:6px 14px;border-radius:6px;font-family:var(--fh);font-weight:700;font-size:13px;letter-spacing:.5px;text-transform:uppercase;cursor:pointer;border:none;transition:all .15s;}
+.btn-red{background:var(--red);color:#fff;}.btn-red:hover{background:var(--red2);}
+.btn-green{background:var(--green);color:#000;}.btn-green:hover{filter:brightness(1.1);}
+.btn-ghost{background:transparent;color:var(--white);border:1px solid var(--border);}.btn-ghost:hover{background:var(--bg3);}
+.btn-yellow{background:var(--yellow);color:#000;}.btn-yellow:hover{filter:brightness(1.1);}
+.btn-purple{background:var(--purple);color:#fff;}.btn-purple:hover{filter:brightness(1.1);}
+.chip{display:flex;align-items:center;gap:6px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;padding:4px 10px 4px 5px;font-size:12px;}
+.chip-av{width:22px;height:22px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-weight:800;font-size:10px;color:#fff;text-transform:uppercase;}
+.adm{background:var(--red-dim);color:var(--red);border:1px solid rgba(232,0,29,.3);border-radius:3px;font-size:9px;font-family:var(--fh);font-weight:700;text-transform:uppercase;letter-spacing:1px;padding:1px 4px;}
+.balance-chip{background:rgba(245,197,24,.1);border:1px solid rgba(245,197,24,.3);border-radius:20px;padding:4px 12px;font-size:13px;font-family:var(--fh);font-weight:700;color:var(--yellow);}
+
+/* NAV */
+.nav-bar{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 20px;display:flex;gap:2px;overflow-x:auto;}
+.nav-tab{padding:10px 14px;font-family:var(--fh);font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--gray);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;white-space:nowrap;transition:all .15s;}
+.nav-tab:hover{color:var(--white);}
+.nav-tab.on{color:var(--white);border-bottom-color:var(--red);}
+
+/* AUTH */
+#auth-page{min-height:calc(100vh - 56px);display:flex;align-items:center;justify-content:center;padding:40px 20px;background:radial-gradient(ellipse 60% 40% at 50% 0%,rgba(232,0,29,.06) 0%,transparent 70%);}
+.auth-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:34px;width:100%;max-width:380px;}
+.auth-box h2{font-family:var(--fh);font-weight:900;font-size:24px;text-transform:uppercase;margin-bottom:4px;}
+.auth-box h2 span{color:var(--red);}
+.auth-box p{color:var(--gray);font-size:13px;margin-bottom:20px;}
+.field{margin-bottom:12px;}
+.field label{display:block;font-family:var(--fh);font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--gray);margin-bottom:4px;}
+.field input,.field select,.field textarea{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:9px 12px;color:var(--white);font-family:var(--fb);font-size:13px;outline:none;transition:border-color .15s;}
+.field input:focus,.field select:focus,.field textarea:focus{border-color:var(--red);}
+.field textarea{resize:vertical;min-height:60px;}
+.field select option{background:var(--bg3);}
+.err{color:var(--red);font-size:12px;padding:7px 10px;background:rgba(232,0,29,.1);border:1px solid rgba(232,0,29,.3);border-radius:6px;margin-top:7px;display:none;}
+.ok{color:var(--green);font-size:12px;padding:7px 10px;background:rgba(0,208,132,.1);border:1px solid rgba(0,208,132,.3);border-radius:6px;margin-top:7px;display:none;}
+.switch{text-align:center;margin-top:14px;font-size:13px;color:var(--gray);}
+.switch a{color:var(--red);cursor:pointer;font-weight:600;}
+
+/* PAGES */
+.page{display:none;}
+.page.vis{display:block;}
+
+/* APP LAYOUT */
+#pg-predictions.vis{display:grid;grid-template-columns:200px 1fr 280px;min-height:calc(100vh - 96px);}
+
+/* SIDEBAR */
+.sidebar{border-right:1px solid var(--border);padding:14px 10px;}
+.sb-label{font-family:var(--fh);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--gray2);margin-bottom:5px;padding-left:6px;margin-top:14px;}
+.sb-label:first-child{margin-top:0;}
+.sb-item{display:flex;align-items:center;gap:7px;padding:6px 8px;border-radius:6px;font-size:13px;color:var(--gray);cursor:pointer;border:none;background:none;width:100%;text-align:left;margin-bottom:1px;transition:all .12s;}
+.sb-item:hover{background:var(--bg3);color:var(--white);}
+.sb-item.on{background:rgba(56,139,253,.1);color:var(--blue);}
+.sb-count{margin-left:auto;background:var(--bg3);padding:1px 6px;border-radius:8px;font-size:11px;font-family:var(--fh);font-weight:700;}
+
+/* FEED */
+.feed{padding:18px;border-right:1px solid var(--border);}
+.feed-title{font-family:var(--fh);font-weight:800;font-size:20px;text-transform:uppercase;margin-bottom:14px;}
+.searchbar{display:flex;align-items:center;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:7px 12px;gap:7px;margin-bottom:12px;}
+.searchbar input{border:none;background:none;color:var(--white);font-family:var(--fb);font-size:13px;outline:none;flex:1;}
+.tabs{display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap;}
+.tab{padding:4px 11px;border-radius:16px;font-family:var(--fh);font-size:12px;font-weight:700;text-transform:uppercase;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--gray);transition:all .15s;}
+.tab:hover{color:var(--white);}
+.tab.on{background:var(--red);color:#fff;border-color:var(--red);}
+.qlist{display:flex;flex-direction:column;gap:10px;}
+
+/* QUESTION CARDS */
+.qcard{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;transition:border-color .2s;}
+.qcard:hover{border-color:var(--gray2);}
+.qcard.closed{opacity:.7;}
+.qcard.resolved-win{border-color:rgba(0,208,132,.4)!important;}
+.qcard.resolved-end{opacity:.6;}
+.qcard-top{padding:14px 14px 10px;}
+.qcard-head{display:flex;gap:10px;margin-bottom:8px;}
+.qcard-icon{width:34px;height:34px;border-radius:6px;background:var(--red-dim);border:1px solid rgba(232,0,29,.3);display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0;}
+.qcard-cat{font-family:var(--fh);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--red);margin-bottom:2px;}
+.qcard-title{font-family:var(--fh);font-weight:700;font-size:16px;line-height:1.2;}
+.qcard-meta{display:flex;align-items:center;gap:8px;font-size:11px;color:var(--gray);margin-top:5px;flex-wrap:wrap;}
+.badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:4px;font-family:var(--fh);font-size:10px;font-weight:700;text-transform:uppercase;}
+.badge-live{background:rgba(0,208,132,.12);color:var(--green);border:1px solid rgba(0,208,132,.25);}
+.badge-closed{background:rgba(136,136,136,.12);color:var(--gray);border:1px solid var(--border);}
+.badge-resolved{background:rgba(245,197,24,.15);color:var(--yellow);border:1px solid rgba(245,197,24,.3);}
+
+/* CHART */
+.chart-area{padding:0 14px 8px;height:110px;position:relative;}
+.chart-legend{display:flex;gap:8px;padding:0 14px 6px;flex-wrap:wrap;}
+.chart-leg-item{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--gray);}
+.chart-leg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.chart-pct-leg{font-family:var(--fh);font-weight:800;font-size:12px;}
+
+/* OPTIONS */
+.opts-area{padding:0 14px 12px;display:flex;flex-direction:column;gap:5px;}
+.opt{position:relative;border-radius:6px;overflow:hidden;}
+.opt.clickable{cursor:pointer;}
+.opt-bar{position:absolute;top:0;left:0;bottom:0;transition:width .5s;}
+.opt-inner{position:relative;display:flex;align-items:center;justify-content:space-between;padding:8px 11px;border:1px solid var(--border);border-radius:6px;background:var(--bg3);z-index:1;transition:border-color .15s;}
+.opt.clickable:hover .opt-inner{border-color:var(--blue);}
+.opt.myvote .opt-inner{border-color:var(--red);background:rgba(232,0,29,.07);}
+.opt.winner .opt-inner{border-color:var(--green)!important;background:rgba(0,208,132,.08)!important;}
+.opt-label{font-size:13px;font-weight:500;display:flex;align-items:center;gap:5px;}
+.opt-check{display:none;color:var(--red);}
+.opt.myvote .opt-check{display:inline;}
+.opt-right{display:flex;align-items:center;gap:7px;}
+.opt-pct{font-family:var(--fh);font-weight:800;font-size:13px;}
+.opt-e{font-size:11px;color:var(--gray);}
+
+/* CARD FOOTER */
+.qcard-footer{padding:9px 14px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.15);flex-wrap:wrap;gap:6px;}
+.qcard-vol{font-size:11px;color:var(--gray);display:flex;align-items:center;gap:5px;flex-wrap:wrap;}
+.qcard-actions{display:flex;gap:5px;flex-wrap:wrap;}
+
+/* RESOLVE BANNER */
+.resolve-banner{background:rgba(0,208,132,.08);border-top:1px solid rgba(0,208,132,.25);padding:10px 14px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;}
+.resolve-banner .winner-text{font-family:var(--fh);font-size:14px;font-weight:700;color:var(--green);}
+.admin-resolve{background:rgba(245,197,24,.08);border-top:1px solid rgba(245,197,24,.2);padding:10px 14px;}
+.admin-resolve p{font-family:var(--fh);font-size:12px;color:var(--yellow);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;}
+.resolve-opts{display:flex;flex-wrap:wrap;gap:6px;}
+
+/* RIGHT PANEL */
+.rpanel{padding:18px;}
+.rp-title{font-family:var(--fh);font-weight:800;font-size:15px;text-transform:uppercase;margin-bottom:12px;}
+.lb-row{display:flex;align-items:center;gap:7px;padding:8px 9px;border-radius:7px;margin-bottom:3px;background:var(--bg2);border:1px solid var(--border);}
+.lb-row.r1{border-color:rgba(245,197,24,.35);background:rgba(245,197,24,.04);}
+.lb-row.r2{border-color:rgba(192,192,192,.25);}
+.lb-row.r3{border-color:rgba(205,127,50,.25);}
+.lb-rank{font-family:var(--fh);font-weight:800;font-size:13px;width:20px;text-align:center;color:var(--gray);}
+.r1 .lb-rank{color:var(--yellow);}.r2 .lb-rank{color:#c0c0c0;}.r3 .lb-rank{color:#cd7f32;}
+.lb-name{flex:1;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.lb-bal{font-family:var(--fh);font-weight:700;font-size:12px;color:var(--yellow);}
+.stat-box{background:var(--bg2);border:1px solid var(--border);border-radius:7px;padding:10px;margin-bottom:7px;}
+.stat-label{font-family:var(--fh);font-size:10px;color:var(--gray);text-transform:uppercase;letter-spacing:1px;}
+.stat-val{font-family:var(--fh);font-size:22px;font-weight:900;}
+
+/* STORE PAGE */
+#pg-store.vis{display:block;padding:24px;max-width:1100px;margin:0 auto;}
+.store-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.store-title{font-family:var(--fh);font-weight:900;font-size:28px;text-transform:uppercase;}
+.store-title span{color:var(--yellow);}
+.store-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;}
+.store-card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:18px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s;}
+.store-card:hover{border-color:var(--gray2);}
+.store-card.out{opacity:.5;}
+.store-item-name{font-family:var(--fh);font-weight:800;font-size:18px;}
+.store-item-desc{font-size:13px;color:var(--gray);flex:1;}
+.store-item-price{font-family:var(--fh);font-weight:900;font-size:22px;color:var(--yellow);}
+.store-item-stock{font-size:11px;color:var(--gray);}
+.store-item-footer{display:flex;align-items:center;justify-content:space-between;margin-top:4px;}
+
+/* MY PROFILE PAGE */
+#pg-profile.vis{display:block;padding:24px;max-width:800px;margin:0 auto;}
+.profile-header{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:20px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.profile-avatar{width:64px;height:64px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-family:var(--fh);font-weight:900;font-size:28px;color:#fff;text-transform:uppercase;flex-shrink:0;}
+.profile-name{font-family:var(--fh);font-weight:900;font-size:24px;text-transform:uppercase;}
+.profile-balance{font-family:var(--fh);font-size:32px;font-weight:900;color:var(--yellow);}
+.profile-bal-label{font-size:12px;color:var(--gray);}
+.purchases-title{font-family:var(--fh);font-weight:800;font-size:18px;text-transform:uppercase;margin-bottom:12px;}
+.purchase-row{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;}
+.purchase-row .pname{font-weight:500;font-size:14px;}
+.purchase-row .pprice{font-family:var(--fh);font-weight:700;font-size:14px;color:var(--yellow);}
+.purchase-row .pdate{font-size:11px;color:var(--gray);}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(3px);}
+.overlay.open{display:flex;}
+.modal{background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:26px;width:100%;max-width:460px;max-height:90vh;overflow-y:auto;}
+.modal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}
+.modal-title{font-family:var(--fh);font-weight:800;font-size:18px;text-transform:uppercase;}
+.xbtn{background:var(--bg3);border:1px solid var(--border);color:var(--gray);width:28px;height:28px;border-radius:6px;cursor:pointer;font-size:14px;}
+.xbtn:hover{color:var(--white);}
+.optbuilder{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+.optrow{display:flex;gap:6px;align-items:center;}
+.optrow input{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 10px;color:var(--white);font-family:var(--fb);font-size:13px;outline:none;}
+.optrow input:focus{border-color:var(--red);}
+.rmbtn{width:30px;height:30px;border-radius:5px;background:var(--bg3);border:1px solid var(--border);color:var(--gray);cursor:pointer;font-size:13px;flex-shrink:0;}
+.rmbtn:hover{color:var(--red);border-color:var(--red);}
+
+/* TOAST */
+.toasts{position:fixed;bottom:18px;right:18px;z-index:999;display:flex;flex-direction:column;gap:5px;}
+.toast{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:9px 13px;font-size:13px;display:flex;align-items:center;gap:6px;box-shadow:0 6px 24px rgba(0,0,0,.5);min-width:200px;transition:opacity .3s;}
+.toast.s{border-color:rgba(0,208,132,.4);}.toast.s::before{content:'✓';color:var(--green);font-weight:800;}
+.toast.e{border-color:rgba(232,0,29,.4);}.toast.e::before{content:'✕';color:var(--red);font-weight:800;}
+.toast.i{border-color:rgba(245,197,24,.4);}.toast.i::before{content:'⚡';color:var(--yellow);}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+.spin{display:inline-block;width:13px;height:13px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;}
+.empty{text-align:center;padding:50px 20px;color:var(--gray);}
+.empty .ico{font-size:40px;margin-bottom:10px;}
+.empty h3{font-family:var(--fh);font-size:17px;font-weight:700;text-transform:uppercase;color:var(--white);margin-bottom:5px;}
+hr.div{border:none;border-top:1px solid var(--border);margin:14px 0;}
+@media(max-width:1100px){#pg-predictions.vis{grid-template-columns:1fr!important;}.sidebar,.rpanel{display:none;}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <svg width="30" height="30" viewBox="0 0 100 100"><path d="M10 18L10 82L25 82L25 57L50 57L50 46L25 46L25 32L60 32L60 18Z" fill="#e8001d"/><path d="M58 18L58 82L72 82L72 18Z" fill="#e8001d"/><path d="M58 18L92 18L92 30L72 30L72 18Z" fill="#e8001d"/></svg>
+    <div class="logo-text">Formula <span>Trompos</span></div>
+  </div>
+  <div class="hdr-right" id="hdr-right"></div>
+</header>
+
+<div class="nav-bar" id="nav-bar" style="display:none">
+  <button class="nav-tab on" data-page="predictions">🏎 Predictions</button>
+  <button class="nav-tab" data-page="store">⚡ The Store</button>
+  <button class="nav-tab" data-page="profile">👤 My Profile</button>
+</div>
+
+<!-- AUTH -->
+<div id="auth-page">
+  <div class="auth-box">
+    <div id="frm-login">
+      <h2>Welcome to <span>Trompos</span></h2>
+      <p>Log in to place your predictions. New users get 100 ⚡ electrons!</p>
+      <div class="field"><label>Email</label><input type="email" id="l-email" placeholder="your@email.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="l-pw" placeholder="••••••••"></div>
+      <div id="l-err" class="err"></div>
+      <button class="btn btn-red" id="btn-login" style="width:100%;margin-top:10px">Log In</button>
+      <div class="switch">No account? <a id="go-reg">Sign up</a></div>
+    </div>
+    <div id="frm-reg" style="display:none">
+      <h2>Join <span>Trompos</span></h2>
+      <p>Start with 100 ⚡ electrons to spend on predictions and the store!</p>
+      <div class="field"><label>Name</label><input type="text" id="r-name" placeholder="Your name"></div>
+      <div class="field"><label>Email</label><input type="email" id="r-email" placeholder="your@email.com"></div>
+      <div class="field"><label>Password</label><input type="password" id="r-pw" placeholder="Min 6 characters"></div>
+      <div id="r-err" class="err"></div>
+      <div id="r-ok" class="ok">✓ Account created! You can now log in.</div>
+      <button class="btn btn-red" id="btn-reg" style="width:100%;margin-top:10px">Create Account</button>
+      <div class="switch">Have an account? <a id="go-login">Log in</a></div>
+    </div>
+  </div>
+</div>
+
+<!-- PREDICTIONS PAGE -->
+<div id="pg-predictions" class="page">
+  <aside class="sidebar">
+    <div class="sb-label">Markets</div>
+    <button class="sb-item on" data-cat="all">🏁 All <span class="sb-count" id="cnt-all">0</span></button>
+    <button class="sb-item" data-cat="Race Results">🏆 Race Results <span class="sb-count" id="cnt-race">0</span></button>
+    <button class="sb-item" data-cat="Qualifying">⏱️ Qualifying <span class="sb-count" id="cnt-qual">0</span></button>
+    <button class="sb-item" data-cat="Race Events">🚨 Race Events <span class="sb-count" id="cnt-ev">0</span></button>
+    <button class="sb-item" data-cat="Championship">🥇 Championship <span class="sb-count" id="cnt-ch">0</span></button>
+    <div class="sb-label">Status</div>
+    <button class="sb-item" data-status="open">🟢 Open</button>
+    <button class="sb-item" data-status="closed">🔴 Closed</button>
+    <button class="sb-item" data-status="resolved">🏆 Resolved</button>
+  </aside>
+  <main class="feed">
+    <div class="feed-title">🏎 Predictions</div>
+    <div class="searchbar">🔍<input type="text" id="search" placeholder="Search predictions..."></div>
+    <div class="tabs">
+      <button class="tab on" data-tab="newest">✨ Newest</button>
+      <button class="tab" data-tab="most-voted">⚡ Most Active</button>
+      <button class="tab" data-tab="mine">👤 My Votes</button>
+    </div>
+    <div id="qlist" class="qlist"><div class="empty"><div class="ico">🏎️</div><h3>Loading...</h3></div></div>
+  </main>
+  <aside class="rpanel">
+    <div class="rp-title">🏆 Leaderboard</div>
+    <div id="lb-list"></div>
+    <hr class="div">
+    <div class="rp-title" style="font-size:13px">📊 Stats</div>
+    <div class="stat-box"><div class="stat-label">Total Questions</div><div id="s-total" class="stat-val">0</div></div>
+    <div class="stat-box"><div class="stat-label">Total Electrons</div><div id="s-votes" class="stat-val" style="color:var(--yellow)">0 ⚡</div></div>
+  </aside>
+</div>
+
+<!-- STORE PAGE -->
+<div id="pg-store" class="page">
+  <div class="store-header">
+    <div>
+      <div class="store-title">⚡ The <span>Store</span></div>
+      <div style="color:var(--gray);font-size:13px;margin-top:4px">Spend your electrons on exclusive items</div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="balance-chip" id="store-balance-display">⚡ 0 e-</div>
+      <button class="btn btn-yellow" id="btn-add-item" style="display:none">+ Add Item</button>
+    </div>
+  </div>
+  <div id="store-grid" class="store-grid"><div class="empty"><div class="ico">🛒</div><h3>Store is empty</h3><p>Admin will add items soon!</p></div></div>
+</div>
+
+<!-- PROFILE PAGE -->
+<div id="pg-profile" class="page">
+  <div id="profile-content"><div class="empty"><div class="ico">👤</div><h3>Loading...</h3></div></div>
+</div>
+
+<!-- NEW QUESTION MODAL -->
+<div id="modal-q" class="overlay">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">+ New Question</div><button class="xbtn" id="close-modal-q">✕</button></div>
+    <div class="field"><label>Question</label><input type="text" id="q-title" placeholder="e.g. Who wins Monaco GP?"></div>
+    <div class="field"><label>Category</label>
+      <select id="q-cat">
+        <option value="Race Results">Race Results</option>
+        <option value="Qualifying">Qualifying</option>
+        <option value="Race Events">Race Events</option>
+        <option value="Championship">Championship</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Reward per correct vote (⚡ electrons)</label>
+      <input type="number" id="q-reward" value="10" min="1" max="500" placeholder="10">
+    </div>
+    <div class="field">
+      <label>Options</label>
+      <div id="optbuilder" class="optbuilder">
+        <div class="optrow"><input type="text" class="oi" placeholder="Option 1"><button class="rmbtn">✕</button></div>
+        <div class="optrow"><input type="text" class="oi" placeholder="Option 2"><button class="rmbtn">✕</button></div>
+      </div>
+      <button class="btn btn-ghost" id="btn-add-opt" style="width:100%;margin-top:4px">+ Add Option</button>
+    </div>
+    <div id="q-err" class="err"></div>
+    <button class="btn btn-red" id="btn-publish" style="width:100%;margin-top:12px">Publish Question</button>
+  </div>
+</div>
+
+<!-- ADD STORE ITEM MODAL -->
+<div id="modal-store" class="overlay">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">+ New Store Item</div><button class="xbtn" id="close-modal-store">✕</button></div>
+    <div class="field"><label>Item Name</label><input type="text" id="si-name" placeholder="e.g. VIP Badge"></div>
+    <div class="field"><label>Description</label><textarea id="si-desc" placeholder="What does the user get?"></textarea></div>
+    <div class="field"><label>Price (⚡ electrons)</label><input type="number" id="si-price" value="50" min="1"></div>
+    <div class="field"><label>Stock (-1 = unlimited)</label><input type="number" id="si-stock" value="-1"></div>
+    <div id="si-err" class="err"></div>
+    <button class="btn btn-yellow" id="btn-publish-item" style="width:100%;margin-top:12px">Add to Store</button>
+  </div>
+</div>
+
+<div id="toasts" class="toasts"></div>
+
+<script>
+var SB=supabase.createClient(
+  'https://rciftwesvujghmefjnhg.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJjaWZ0d2VzdnVqZ2htZWZqbmhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ3MDYxODUsImV4cCI6MjA5MDI4MjE4NX0.isIUPb4PuO5u08fK6Ix9Rz0CF_b3nfga9ZerhPsIMqs'
+);
+
+var ME=null,ADMIN=false,QS=[],RT=null,MY_BALANCE=100,CHARTS={};
+var F={cat:'all',status:null,tab:'newest',q:''};
+var COLORS=['#388bfd','#e8001d','#00d084','#f5c518','#a371f7','#f78166','#56d364','#79c0ff'];
+var currentPage='predictions';
+
+function toast(msg,type){
+  var c=document.getElementById('toasts'),t=document.createElement('div');
+  t.className='toast '+(type||'s');t.textContent=msg;c.appendChild(t);
+  setTimeout(function(){t.style.opacity='0';setTimeout(function(){if(t.parentNode)t.remove();},300);},4000);
+}
+
+// ── AUTH ──────────────────────────────────────────
+document.getElementById('btn-login').onclick=async function(){
+  var email=document.getElementById('l-email').value.trim();
+  var pw=document.getElementById('l-pw').value;
+  var err=document.getElementById('l-err');
+  err.style.display='none';
+  if(!email||!pw){err.textContent='Please fill in all fields.';err.style.display='block';return;}
+  this.innerHTML='<span class="spin"></span> Logging in...';this.disabled=true;
+  var r=await SB.auth.signInWithPassword({email:email,password:pw});
+  if(r.error){err.textContent=r.error.message;err.style.display='block';this.textContent='Log In';this.disabled=false;return;}
+  window.location.reload();
+};
+document.getElementById('btn-reg').onclick=async function(){
+  var name=document.getElementById('r-name').value.trim();
+  var email=document.getElementById('r-email').value.trim();
+  var pw=document.getElementById('r-pw').value;
+  var err=document.getElementById('r-err'),ok=document.getElementById('r-ok');
+  err.style.display='none';ok.style.display='none';
+  if(!name||!email||pw.length<6){err.textContent='Fill all fields (password min 6 chars).';err.style.display='block';return;}
+  this.innerHTML='<span class="spin"></span>';this.disabled=true;
+  var r=await SB.auth.signUp({email:email,password:pw,options:{data:{name:name}}});
+  this.textContent='Create Account';this.disabled=false;
+  if(r.error){err.textContent=r.error.message;err.style.display='block';return;}
+  ok.style.display='block';
+};
+document.getElementById('go-reg').onclick=function(){document.getElementById('frm-login').style.display='none';document.getElementById('frm-reg').style.display='block';};
+document.getElementById('go-login').onclick=function(){document.getElementById('frm-reg').style.display='none';document.getElementById('frm-login').style.display='block';};
+document.getElementById('l-pw').onkeydown=function(e){if(e.key==='Enter')document.getElementById('btn-login').onclick();};
+
+// ── SHOW APP ──────────────────────────────────────
+function showApp(){
+  document.getElementById('auth-page').style.display='none';
+  document.getElementById('nav-bar').style.display='flex';
+  updateHeader();
+  showPage('predictions');
+  loadQuestions();
+}
+
+function updateHeader(){
+  var name=(ME.user_metadata&&ME.user_metadata.name)?ME.user_metadata.name:ME.email;
+  document.getElementById('hdr-right').innerHTML=
+    '<div class="balance-chip">⚡ '+MY_BALANCE+' e-</div>'
+    +'<div class="chip"><div class="chip-av">'+name[0].toUpperCase()+'</div><span>'+name+'</span>'+(ADMIN?'<span class="adm">Admin</span>':'')+'</div>'
+    +(ADMIN?'<button class="btn btn-red" id="btn-new-q">+ Question</button>':'')
+    +'<button class="btn btn-ghost" id="btn-logout">Log Out</button>';
+  document.getElementById('btn-logout').onclick=async function(){await SB.auth.signOut();window.location.reload();};
+  if(ADMIN){
+    document.getElementById('btn-new-q').onclick=function(){document.getElementById('modal-q').classList.add('open');};
+  }
+}
+
+function showPage(page){
+  currentPage=page;
+  ['predictions','store','profile'].forEach(function(p){
+    document.getElementById('pg-'+p).classList.remove('vis');
+  });
+  document.getElementById('pg-'+page).classList.add('vis');
+  document.querySelectorAll('[data-page]').forEach(function(t){t.classList.remove('on');});
+  document.querySelector('[data-page="'+page+'"]').classList.add('on');
+  if(page==='store')loadStore();
+  if(page==='profile')loadProfile();
+}
+
+// ── QUESTIONS ─────────────────────────────────────
+async function loadQuestions(){
+  var r=await SB.from('questions').select('*').order('created_at',{ascending:false});
+  if(r.error){toast('Error loading','e');return;}
+  QS=r.data||[];renderAll();
+  if(RT)SB.removeChannel(RT);
+  RT=SB.channel('qch').on('postgres_changes',{event:'*',schema:'public',table:'questions'},async function(){
+    var r2=await SB.from('questions').select('*').order('created_at',{ascending:false});
+    if(!r2.error){QS=r2.data||[];renderAll();}
+  }).subscribe();
+}
+
+function tv(q){return Object.values(q.votes||{}).reduce(function(a,b){return a+b;},0);}
+
+function renderAll(){renderQ();renderSB();renderStats();renderLB();updateBalanceDisplays();}
+
+function updateBalanceDisplays(){
+  var bc=document.querySelector('.balance-chip');
+  if(bc)bc.textContent='⚡ '+MY_BALANCE+' e-';
+  var sd=document.getElementById('store-balance-display');
+  if(sd)sd.textContent='⚡ '+MY_BALANCE+' e-';
+}
+
+function buildChartData(q){
+  var opts=q.options||[],tot=tv(q);
+  if(!opts.length)return null;
+  return opts.map(function(opt,i){
+    var finalPct=tot>0?Math.round((((q.votes&&q.votes[opt])||0)/tot)*100):Math.round(100/opts.length);
+    var base=Math.round(100/opts.length),pts=[];
+    for(var j=0;j<7;j++){
+      var noise=(Math.random()-0.5)*18,prog=j/6;
+      var val=Math.round(base+(finalPct-base)*prog+noise*(1-prog));
+      pts.push(Math.max(0,Math.min(100,val)));
+    }
+    pts[6]=finalPct;
+    return{label:opt,data:pts,borderColor:COLORS[i%COLORS.length],backgroundColor:'transparent',borderWidth:2,pointRadius:0,tension:0.4};
+  });
+}
+
+function renderQ(){
+  var qs=QS.slice();
+  if(F.cat!=='all')qs=qs.filter(function(q){return q.category===F.cat;});
+  if(F.status==='open')qs=qs.filter(function(q){return !q.closed&&!q.resolved_option;});
+  if(F.status==='closed')qs=qs.filter(function(q){return q.closed&&!q.resolved_option;});
+  if(F.status==='resolved')qs=qs.filter(function(q){return !!q.resolved_option;});
+  if(F.q){var s=F.q.toLowerCase();qs=qs.filter(function(q){return q.title.toLowerCase().indexOf(s)>-1;});}
+  if(F.tab==='most-voted')qs.sort(function(a,b){return tv(b)-tv(a);});
+  if(F.tab==='mine')qs=qs.filter(function(q){return ME&&q.user_votes&&q.user_votes[ME.id];});
+
+  Object.keys(CHARTS).forEach(function(id){if(CHARTS[id]){CHARTS[id].destroy();delete CHARTS[id];}});
+
+  var el=document.getElementById('qlist');
+  if(!qs.length){el.innerHTML='<div class="empty"><div class="ico">🏎️</div><h3>No questions yet</h3></div>';return;}
+  var icons={'Race Results':'🏆','Qualifying':'⏱️','Race Events':'🚨','Championship':'🥇'};
+
+  el.innerHTML=qs.map(function(q){
+    var tot=tv(q),myv=ME&&q.user_votes?q.user_votes[ME.id]:null,canv=!q.closed&&!myv&&!q.resolved_option;
+    var resolved=q.resolved_option||null;
+    var reward=q.reward||10;
+
+    // status badge
+    var statusBadge=resolved
+      ?'<span class="badge badge-resolved">🏆 Resolved</span>'
+      :(q.closed?'<span class="badge badge-closed">🔒 Closed</span>':'<span class="badge badge-live">🟢 Live</span>');
+
+    // winner info
+    var myResult='';
+    if(resolved&&myv){
+      if(myv===resolved)myResult='<span style="color:var(--green);font-weight:600">✓ You won +'+reward+' ⚡</span>';
+      else myResult='<span style="color:var(--red)">✗ You lost</span>';
+    }
+
+    var opts=(q.options||[]).map(function(o,i){
+      var cnt=(q.votes&&q.votes[o])||0,pct=tot>0?Math.round((cnt/tot)*100):0;
+      var isWinner=resolved&&resolved===o;
+      return '<div class="opt'+(myv===o?' myvote':'')+(isWinner?' winner':'')+(canv?' clickable':'')+'" data-qid="'+q.id+'" data-opt="'+o.replace(/"/g,'&quot;')+'">'
+        +'<div class="opt-bar" style="width:'+pct+'%;background:'+COLORS[i%COLORS.length]+'22"></div>'
+        +'<div class="opt-inner">'
+        +'<span class="opt-label">'
+        +(myv===o?'<span class="opt-check">✓</span>':'')
+        +(isWinner?'🏆 ':'')
+        +o+'</span>'
+        +'<span class="opt-right"><span class="opt-e">'+cnt+' ⚡</span><span class="opt-pct" style="color:'+COLORS[i%COLORS.length]+'">'+pct+'%</span></span>'
+        +'</div></div>';
+    }).join('');
+
+    // resolve banner (shown after admin resolves)
+    var resolveBanner=resolved
+      ?'<div class="resolve-banner"><div class="winner-text">🏆 Winner: '+resolved+'</div><div style="font-size:12px;color:var(--gray)">Reward: +'+reward+' ⚡ per correct vote</div></div>'
+      :'';
+
+    // admin resolve panel (shown when question is closed but not resolved)
+    var adminResolve='';
+    if(ADMIN&&q.closed&&!resolved){
+      adminResolve='<div class="admin-resolve"><p>⚡ Select the winning outcome:</p><div class="resolve-opts">'
+        +(q.options||[]).map(function(o){
+          return '<button class="btn btn-green resolve-btn" data-qid="'+q.id+'" data-opt="'+o.replace(/"/g,'&quot;')+'" data-reward="'+reward+'">'+o+'</button>';
+        }).join('')
+        +'</div></div>';
+    }
+
+    var adminActions=ADMIN?'<div class="qcard-actions">'
+      +(!q.closed&&!resolved?'<button class="btn btn-ghost close-q" data-qid="'+q.id+'" style="font-size:11px;padding:4px 9px;color:var(--gray)">🔒 Close</button>':'')
+      +'<button class="btn btn-ghost del-q" data-qid="'+q.id+'" style="font-size:11px;padding:4px 9px;color:var(--red);border-color:var(--red)">🗑 Del</button>'
+      +'</div>':'';
+
+    return '<div class="qcard'+(resolved?' resolved-end':'')+(resolved&&myv===resolved?' resolved-win':'')+'">'
+      +'<div class="qcard-top">'
+      +'<div class="qcard-head"><div class="qcard-icon">'+(icons[q.category]||'🏁')+'</div>'
+      +'<div><div class="qcard-cat">'+q.category+'</div><div class="qcard-title">'+q.title+'</div>'
+      +'<div class="qcard-meta">'+statusBadge
+      +'<span>'+tot+' ⚡</span>'
+      +'<span style="color:var(--yellow)">Reward: +'+reward+' ⚡</span>'
+      +(myv&&!resolved?'<span style="color:var(--blue)">✓ Voted: '+myv+'</span>':'')
+      +myResult
+      +(!myv&&!resolved&&!q.closed?'<span style="color:var(--blue)">Click to vote</span>':'')
+      +'</div></div></div></div>'
+      +'<div class="chart-area"><canvas id="chart-'+q.id+'"></canvas></div>'
+      +'<div class="chart-legend" id="legend-'+q.id+'"></div>'
+      +'<div class="opts-area">'+opts+'</div>'
+      +resolveBanner
+      +adminResolve
+      +'<div class="qcard-footer"><div class="qcard-vol">⚡ '+tot+' electrons cast</div>'+adminActions+'</div>'
+      +'</div>';
+  }).join('');
+
+  // Wire events
+  el.querySelectorAll('.opt.clickable').forEach(function(o){o.onclick=function(){castVote(this.dataset.qid,this.dataset.opt);};});
+  el.querySelectorAll('.close-q').forEach(function(b){b.onclick=function(e){e.stopPropagation();closeQ(this.dataset.qid);};});
+  el.querySelectorAll('.del-q').forEach(function(b){b.onclick=function(e){e.stopPropagation();deleteQ(this.dataset.qid);};});
+  el.querySelectorAll('.resolve-btn').forEach(function(b){
+    b.onclick=function(e){e.stopPropagation();resolveQ(this.dataset.qid,this.dataset.opt,parseInt(this.dataset.reward));};
+  });
+
+  // Draw charts
+  qs.forEach(function(q){
+    var canvas=document.getElementById('chart-'+q.id);
+    if(!canvas)return;
+    var datasets=buildChartData(q);
+    if(!datasets)return;
+    CHARTS[q.id]=new Chart(canvas,{
+      type:'line',data:{labels:['','','','','','','Now'],datasets:datasets},
+      options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'rgba(22,27,34,.95)',borderColor:'#30363d',borderWidth:1,titleColor:'#e6edf3',bodyColor:'#7d8590',callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.raw+'%';}}}},
+        scales:{x:{display:false},y:{display:false,min:0,max:100}},animation:{duration:500}
+      }
+    });
+    var leg=document.getElementById('legend-'+q.id);
+    if(leg)leg.innerHTML=datasets.map(function(d){
+      return '<div class="chart-leg-item"><div class="chart-leg-dot" style="background:'+d.borderColor+'"></div><span>'+d.label+'</span><span class="chart-pct-leg" style="color:'+d.borderColor+'">'+d.data[6]+'%</span></div>';
+    }).join('');
+  });
+}
+
+function renderSB(){
+  var c={'Race Results':0,'Qualifying':0,'Race Events':0,'Championship':0};
+  QS.forEach(function(q){if(c[q.category]!==undefined)c[q.category]++;});
+  document.getElementById('cnt-all').textContent=QS.length;
+  document.getElementById('cnt-race').textContent=c['Race Results'];
+  document.getElementById('cnt-qual').textContent=c['Qualifying'];
+  document.getElementById('cnt-ev').textContent=c['Race Events'];
+  document.getElementById('cnt-ch').textContent=c['Championship'];
+}
+function renderStats(){
+  document.getElementById('s-total').textContent=QS.length;
+  document.getElementById('s-votes').textContent=QS.reduce(function(s,q){return s+tv(q);},0)+' ⚡';
+}
+async function renderLB(){
+  var r=await SB.from('profiles').select('name,balance').order('balance',{ascending:false}).limit(8);
+  var el=document.getElementById('lb-list');
+  if(r.error||!r.data||!r.data.length){el.innerHTML='<div style="color:var(--gray);font-size:12px;text-align:center;padding:12px">No data yet</div>';return;}
+  el.innerHTML=r.data.map(function(u,i){
+    var rank=i+1,cls=rank===1?'r1':rank===2?'r2':rank===3?'r3':'';
+    var medal=rank===1?'🥇':rank===2?'🥈':rank===3?'🥉':rank;
+    return '<div class="lb-row '+cls+'"><div class="lb-rank">'+medal+'</div><div class="lb-name">'+(u.name||'User')+'</div><div class="lb-bal">'+(u.balance||0)+' ⚡</div></div>';
+  }).join('');
+}
+
+// ── VOTING ─────────────────────────────────────────
+async function castVote(qid,opt){
+  var q=QS.find(function(x){return x.id===qid;});
+  if(!q||!ME)return;
+  if(q.user_votes&&q.user_votes[ME.id]){toast('Already voted!','e');return;}
+  var nv=Object.assign({},q.votes||{});nv[opt]=(nv[opt]||0)+1;
+  var nuv=Object.assign({},q.user_votes||{});nuv[ME.id]=opt;
+  var r=await SB.from('questions').update({votes:nv,user_votes:nuv}).eq('id',qid);
+  if(r.error){toast('Error voting','e');return;}
+  toast('⚡ Electron cast for: '+opt,'i');
+}
+
+// ── RESOLVE (ADMIN) ────────────────────────────────
+async function resolveQ(qid,winningOpt,reward){
+  if(!confirm('Resolve: "'+winningOpt+'" is the winner? This will award +'+reward+' ⚡ to all correct voters.'))return;
+  var q=QS.find(function(x){return x.id===qid;});
+  if(!q){toast('Question not found','e');return;}
+
+  // Mark question as resolved
+  var r=await SB.from('questions').update({resolved_option:winningOpt,closed:true}).eq('id',qid);
+  if(r.error){toast('Error resolving','e');return;}
+
+  // Award electrons to all correct voters
+  var winners=Object.entries(q.user_votes||{}).filter(function(kv){return kv[1]===winningOpt;}).map(function(kv){return kv[0];});
+  if(winners.length>0){
+    // Update each winner's balance
+    for(var i=0;i<winners.length;i++){
+      var uid=winners[i];
+      // Get current balance
+      var pr=await SB.from('profiles').select('balance').eq('id',uid).single();
+      if(!pr.error&&pr.data){
+        var newBal=(pr.data.balance||0)+reward;
+        await SB.from('profiles').update({balance:newBal}).eq('id',uid);
+      }
+    }
+    // Refresh own balance
+    await refreshBalance();
+    toast('✓ Resolved! '+winners.length+' winner'+(winners.length!==1?'s':'')+' awarded +'+reward+' ⚡','s');
+  }else{
+    toast('Resolved — no correct voters to award','i');
+  }
+}
+
+async function refreshBalance(){
+  var r=await SB.from('profiles').select('balance').eq('id',ME.id).single();
+  if(!r.error&&r.data){MY_BALANCE=r.data.balance||0;updateBalanceDisplays();}
+}
+
+async function closeQ(qid){
+  if(!confirm('Close this question? Voting will stop.'))return;
+  var r=await SB.from('questions').update({closed:true}).eq('id',qid);
+  if(r.error){toast('Error','e');return;}
+  toast('Question closed','s');
+}
+async function deleteQ(qid){
+  if(!confirm('Delete permanently?'))return;
+  var r=await SB.from('questions').delete().eq('id',qid);
+  if(r.error){toast('Error deleting: '+r.error.message,'e');return;}
+  toast('Deleted','s');
+}
+
+// ── STORE ──────────────────────────────────────────
+async function loadStore(){
+  var sbd=document.getElementById('store-balance-display');
+  if(sbd)sbd.textContent='⚡ '+MY_BALANCE+' e-';
+  var addBtn=document.getElementById('btn-add-item');
+  if(addBtn)addBtn.style.display=ADMIN?'inline-flex':'none';
+
+  var r=await SB.from('store_items').select('*').eq('active',true).order('created_at',{ascending:false});
+  var grid=document.getElementById('store-grid');
+  if(r.error||!r.data||!r.data.length){
+    grid.innerHTML='<div class="empty"><div class="ico">🛒</div><h3>Store is empty</h3><p style="color:var(--gray)">Admin will add items soon!</p></div>';
+    return;
+  }
+  grid.innerHTML=r.data.map(function(item){
+    var outOfStock=item.stock===0;
+    var canAfford=MY_BALANCE>=item.price;
+    return '<div class="store-card'+(outOfStock?' out':'')+'">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between">'
+      +'<div class="store-item-name">'+item.name+'</div>'
+      +(ADMIN?'<button class="btn btn-ghost" onclick="deleteStoreItem(\''+item.id+'\')" style="font-size:11px;padding:3px 8px;color:var(--red);border-color:var(--red)">🗑</button>':'')
+      +'</div>'
+      +'<div class="store-item-desc">'+(item.description||'')+'</div>'
+      +'<div class="store-item-footer">'
+      +'<div>'
+      +'<div class="store-item-price">'+item.price+' ⚡</div>'
+      +'<div class="store-item-stock">'+(item.stock===-1?'Unlimited stock':(item.stock===0?'Out of stock':item.stock+' left'))+'</div>'
+      +'</div>'
+      +(outOfStock
+        ?'<button class="btn btn-ghost" disabled style="opacity:.4">Out of Stock</button>'
+        :(canAfford
+          ?'<button class="btn btn-yellow" onclick="buyItem(\''+item.id+'\','+item.price+',\''+item.name.replace(/'/g,"\\'")+'\')" >Buy</button>'
+          :'<button class="btn btn-ghost" disabled style="opacity:.5">Need '+(item.price-MY_BALANCE)+' more ⚡</button>'
+        )
+      )
+      +'</div></div>';
+  }).join('');
+}
+
+async function buyItem(itemId,price,name){
+  if(MY_BALANCE<price){toast('Not enough electrons! Need '+price+' ⚡','e');return;}
+  if(!confirm('Buy "'+name+'" for '+price+' ⚡?'))return;
+
+  // Deduct balance
+  var newBal=MY_BALANCE-price;
+  var r1=await SB.from('profiles').update({balance:newBal}).eq('id',ME.id);
+  if(r1.error){toast('Error purchasing','e');return;}
+
+  // Record purchase
+  await SB.from('purchases').insert({user_id:ME.id,item_id:itemId,price_paid:price});
+
+  // Decrement stock if not unlimited
+  var itemR=await SB.from('store_items').select('stock').eq('id',itemId).single();
+  if(!itemR.error&&itemR.data&&itemR.data.stock>0){
+    await SB.from('store_items').update({stock:itemR.data.stock-1,active:itemR.data.stock-1>0}).eq('id',itemId);
+  }
+
+  MY_BALANCE=newBal;
+  updateBalanceDisplays();
+  toast('🛒 Purchased: '+name+'! Enjoy!','s');
+  loadStore();
+}
+
+async function deleteStoreItem(itemId){
+  if(!confirm('Remove this item from the store?'))return;
+  await SB.from('store_items').delete().eq('id',itemId);
+  toast('Item removed','s');
+  loadStore();
+}
+
+// ── PROFILE ───────────────────────────────────────
+async function loadProfile(){
+  var name=(ME.user_metadata&&ME.user_metadata.name)?ME.user_metadata.name:ME.email;
+  var myVotes=QS.filter(function(q){return q.user_votes&&q.user_votes[ME.id];});
+  var myWins=QS.filter(function(q){return q.resolved_option&&q.user_votes&&q.user_votes[ME.id]===q.resolved_option;});
+
+  var pur=await SB.from('purchases').select('*,store_items(name,price)').eq('user_id',ME.id).order('created_at',{ascending:false});
+  var purchases=(!pur.error&&pur.data)?pur.data:[];
+
+  document.getElementById('profile-content').innerHTML=
+    '<div class="profile-header">'
+    +'<div class="profile-avatar">'+name[0].toUpperCase()+'</div>'
+    +'<div>'
+    +'<div class="profile-name">'+name+'</div>'
+    +'<div class="profile-bal-label">Current Balance</div>'
+    +'<div class="profile-balance">'+MY_BALANCE+' ⚡</div>'
+    +'</div>'
+    +'<div style="margin-left:auto;display:flex;gap:20px;flex-wrap:wrap">'
+    +'<div class="stat-box" style="min-width:120px"><div class="stat-label">Predictions</div><div class="stat-val">'+myVotes.length+'</div></div>'
+    +'<div class="stat-box" style="min-width:120px"><div class="stat-label">Correct</div><div class="stat-val" style="color:var(--green)">'+myWins.length+'</div></div>'
+    +'<div class="stat-box" style="min-width:120px"><div class="stat-label">Win Rate</div><div class="stat-val" style="color:var(--yellow)">'+(myVotes.length>0?Math.round((myWins.length/myVotes.length)*100):0)+'%</div></div>'
+    +'</div>'
+    +'</div>'
+    +'<div class="purchases-title">🛒 Purchase History</div>'
+    +(purchases.length===0
+      ?'<div class="empty"><div class="ico">🛒</div><h3>No purchases yet</h3></div>'
+      :purchases.map(function(p){
+        var d=new Date(p.created_at);
+        return '<div class="purchase-row">'
+          +'<div>'
+          +'<div class="pname">'+(p.store_items?p.store_items.name:'Item')+'</div>'
+          +'<div class="pdate">'+d.toLocaleDateString()+'</div>'
+          +'</div>'
+          +'<div class="pprice">-'+p.price_paid+' ⚡</div>'
+          +'</div>';
+      }).join('')
+    );
+}
+
+// ── QUESTION MODAL ─────────────────────────────────
+document.getElementById('close-modal-q').onclick=function(){document.getElementById('modal-q').classList.remove('open');};
+document.getElementById('modal-q').onclick=function(e){if(e.target===this)this.classList.remove('open');};
+document.getElementById('btn-add-opt').onclick=function(){
+  var b=document.getElementById('optbuilder');
+  var row=document.createElement('div');row.className='optrow';
+  row.innerHTML='<input type="text" class="oi" placeholder="Option '+(b.children.length+1)+'"><button class="rmbtn">✕</button>';
+  b.appendChild(row);
+  row.querySelector('.rmbtn').onclick=function(){if(b.children.length>2)row.remove();else toast('Min 2 options','e');};
+};
+document.querySelectorAll('.rmbtn').forEach(function(b){
+  b.onclick=function(){var ob=document.getElementById('optbuilder');if(ob.children.length>2)b.closest('.optrow').remove();else toast('Min 2 options','e');};
+});
+document.getElementById('btn-publish').onclick=async function(){
+  var title=document.getElementById('q-title').value.trim();
+  var cat=document.getElementById('q-cat').value;
+  var reward=parseInt(document.getElementById('q-reward').value)||10;
+  var opts=[].slice.call(document.querySelectorAll('.oi')).map(function(i){return i.value.trim();}).filter(Boolean);
+  var err=document.getElementById('q-err');err.style.display='none';
+  if(!title){err.textContent='Please enter a title.';err.style.display='block';return;}
+  if(opts.length<2){err.textContent='Need at least 2 options.';err.style.display='block';return;}
+  this.innerHTML='<span class="spin"></span>';this.disabled=true;
+  var votes={};opts.forEach(function(o){votes[o]=0;});
+  var r=await SB.from('questions').insert({title:title,category:cat,options:opts,votes:votes,user_votes:{},closed:false,reward:reward});
+  this.textContent='Publish Question';this.disabled=false;
+  if(r.error){err.textContent=r.error.message;err.style.display='block';return;}
+  document.getElementById('modal-q').classList.remove('open');
+  document.getElementById('q-title').value='';
+  document.getElementById('optbuilder').innerHTML='<div class="optrow"><input type="text" class="oi" placeholder="Option 1"><button class="rmbtn">✕</button></div><div class="optrow"><input type="text" class="oi" placeholder="Option 2"><button class="rmbtn">✕</button></div>';
+  toast('Question published! 🏁','s');
+};
+
+// ── STORE ITEM MODAL ───────────────────────────────
+document.getElementById('close-modal-store').onclick=function(){document.getElementById('modal-store').classList.remove('open');};
+document.getElementById('modal-store').onclick=function(e){if(e.target===this)this.classList.remove('open');};
+document.getElementById('btn-add-item').onclick=function(){document.getElementById('modal-store').classList.add('open');};
+document.getElementById('btn-publish-item').onclick=async function(){
+  var name=document.getElementById('si-name').value.trim();
+  var desc=document.getElementById('si-desc').value.trim();
+  var price=parseInt(document.getElementById('si-price').value)||50;
+  var stock=parseInt(document.getElementById('si-stock').value);
+  if(isNaN(stock))stock=-1;
+  var err=document.getElementById('si-err');err.style.display='none';
+  if(!name){err.textContent='Please enter item name.';err.style.display='block';return;}
+  this.innerHTML='<span class="spin"></span>';this.disabled=true;
+  var r=await SB.from('store_items').insert({name:name,description:desc,price:price,stock:stock,active:true});
+  this.textContent='Add to Store';this.disabled=false;
+  if(r.error){err.textContent=r.error.message;err.style.display='block';return;}
+  document.getElementById('modal-store').classList.remove('open');
+  document.getElementById('si-name').value='';
+  document.getElementById('si-desc').value='';
+  toast('Item added to store!','s');
+  loadStore();
+};
+
+// ── FILTERS ───────────────────────────────────────
+document.querySelectorAll('[data-cat]').forEach(function(b){
+  b.onclick=function(){F.cat=this.dataset.cat;F.status=null;document.querySelectorAll('[data-cat]').forEach(function(x){x.classList.remove('on');});document.querySelectorAll('[data-cat="'+F.cat+'"]').forEach(function(x){x.classList.add('on');});renderQ();};
+});
+document.querySelectorAll('[data-status]').forEach(function(b){
+  b.onclick=function(){var s=this.dataset.status;F.status=F.status===s?null:s;document.querySelectorAll('[data-status]').forEach(function(x){x.classList.remove('on');});if(F.status)this.classList.add('on');renderQ();};
+});
+document.querySelectorAll('[data-tab]').forEach(function(b){
+  b.onclick=function(){F.tab=this.dataset.tab;document.querySelectorAll('[data-tab]').forEach(function(x){x.classList.remove('on');});this.classList.add('on');renderQ();};
+});
+document.querySelectorAll('[data-page]').forEach(function(b){
+  b.onclick=function(){showPage(this.dataset.page);};
+});
+document.getElementById('search').oninput=function(){F.q=this.value;renderQ();};
+
+// ── BOOT ──────────────────────────────────────────
+(async function(){
+  var r=await SB.auth.getSession();
+  if(r.data&&r.data.session&&r.data.session.user){
+    ME=r.data.session.user;ADMIN=false;MY_BALANCE=100;
+    try{
+      var pr=await Promise.race([
+        SB.from('profiles').select('is_admin,name,balance').eq('id',ME.id).single(),
+        new Promise(function(res){setTimeout(function(){res({data:null});},3000);})
+      ]);
+      if(pr.data){
+        ADMIN=!!pr.data.is_admin;
+        MY_BALANCE=pr.data.balance||100;
+        if(pr.data.name){ME.user_metadata=ME.user_metadata||{};ME.user_metadata.name=pr.data.name;}
+      }
+    }catch(e){}
+    showApp();
+  }
+})();
+</script>
+</body>
+</html>
