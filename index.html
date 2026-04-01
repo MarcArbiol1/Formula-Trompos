@@ -810,9 +810,9 @@ async function loadAdminPanel(){
       +'<div class="user-bal-current">'+u.balance+' ⚡</div>'
       +'<input class="bal-input" type="number" value="'+u.balance+'" id="bal-'+u.id+'" min="0">'
       +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      +'<button class="btn btn-yellow" onclick="setBalance('' + u.id + '',false)">Set</button>'
-      +'<button class="btn btn-green" onclick="addBalance('' + u.id + '')">+ Add</button>'
-      +'<button class="btn btn-ghost" onclick="resetBalance('' + u.id + '')">Reset 100</button>'
+      +'<button class="btn btn-yellow" onclick="setBalance(\'"+u.id+"\'  ,false)">Set</button>'
+      +'<button class="btn btn-green" onclick="addBalance(\'"+u.id+"\')">+ Add</button>'
+      +'<button class="btn btn-ghost" onclick="resetBalance(\'"+u.id+"\')">Reset 100</button>'
       +'</div>'
       +'</div>';
   }).join('');
