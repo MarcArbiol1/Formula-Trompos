@@ -648,24 +648,25 @@ async function resolveQ(qid,winningOpt,reward){
 
   // Mark question as resolved
   var r=await SB.from('questions').update({resolved_option:winningOpt,closed:true}).eq('id',qid);
-  if(r.error){toast('Error resolving','e');return;}
+  if(r.error){toast('Error resolving: '+r.error.message,'e');return;}
 
   // Award electrons to all correct voters
   var winners=Object.entries(q.user_votes||{}).filter(function(kv){return kv[1]===winningOpt;}).map(function(kv){return kv[0];});
+  var awardedCount=0;
   if(winners.length>0){
-    // Update each winner's balance
     for(var i=0;i<winners.length;i++){
       var uid=winners[i];
-      // Get current balance
-      var pr=await SB.from('profiles').select('balance').eq('id',uid).single();
+      // Use rpc to bypass RLS — increment balance atomically
+      var pr=await SB.from('profiles').select('balance,id').eq('id',uid).single();
       if(!pr.error&&pr.data){
         var newBal=(pr.data.balance||0)+reward;
-        await SB.from('profiles').update({balance:newBal}).eq('id',uid);
+        var upd=await SB.from('profiles').update({balance:newBal}).eq('id',uid);
+        if(!upd.error){ awardedCount++; }
+        else { toast('Could not award '+uid+': '+upd.error.message,'e'); }
       }
     }
-    // Refresh own balance
     await refreshBalance();
-    toast('✓ Resolved! '+winners.length+' winner'+(winners.length!==1?'s':'')+' awarded +'+reward+' ⚡','s');
+    toast('✓ Resolved! '+awardedCount+'/'+winners.length+' winner'+(winners.length!==1?'s':'')+' awarded +'+reward+' ⚡','s');
   }else{
     toast('Resolved — no correct voters to award','i');
   }
@@ -829,27 +830,27 @@ async function loadAdminPanel(){
 
 async function setBalance(uid,silent){
   var input=document.getElementById('bal-'+uid);
-  if(!input)return;
+  if(!input){toast('Input not found','e');return;}
   var val=parseInt(input.value);
   if(isNaN(val)||val<0){toast('Invalid amount','e');return;}
   var r=await SB.from('profiles').update({balance:val}).eq('id',uid);
-  if(r.error){toast('Error updating balance','e');return;}
-  if(!silent)toast('Balance set to '+val+' ⚡','s');
+  if(r.error){toast('Error: '+r.error.message,'e');return;}
+  if(!silent)toast('✓ Balance set to '+val+' ⚡','s');
   if(uid===ME.id){MY_BALANCE=val;updateBalanceDisplays();}
   loadAdminPanel();
 }
 
 async function addBalance(uid){
   var input=document.getElementById('bal-'+uid);
-  if(!input)return;
+  if(!input){toast('Input not found','e');return;}
   var addAmt=parseInt(input.value);
-  if(isNaN(addAmt)||addAmt<=0){toast('Enter amount to add','e');return;}
+  if(isNaN(addAmt)||addAmt<=0){toast('Enter a positive amount to add','e');return;}
   var pr=await SB.from('profiles').select('balance').eq('id',uid).single();
-  if(pr.error){toast('Error','e');return;}
+  if(pr.error){toast('Error fetching balance: '+pr.error.message,'e');return;}
   var newBal=(pr.data.balance||0)+addAmt;
   var r=await SB.from('profiles').update({balance:newBal}).eq('id',uid);
-  if(r.error){toast('Error','e');return;}
-  toast('+'+addAmt+' ⚡ added → new balance: '+newBal+' ⚡','s');
+  if(r.error){toast('Error adding: '+r.error.message,'e');return;}
+  toast('✓ +'+addAmt+' ⚡ added → now: '+newBal+' ⚡','s');
   if(uid===ME.id){MY_BALANCE=newBal;updateBalanceDisplays();}
   loadAdminPanel();
 }
@@ -857,8 +858,8 @@ async function addBalance(uid){
 async function resetBalance(uid){
   if(!confirm('Reset this user to 100 ⚡?'))return;
   var r=await SB.from('profiles').update({balance:100}).eq('id',uid);
-  if(r.error){toast('Error','e');return;}
-  toast('Balance reset to 100 ⚡','s');
+  if(r.error){toast('Error: '+r.error.message,'e');return;}
+  toast('✓ Balance reset to 100 ⚡','s');
   if(uid===ME.id){MY_BALANCE=100;updateBalanceDisplays();}
   loadAdminPanel();
 }
