@@ -359,8 +359,9 @@ hr.div{border:none;border-top:1px solid var(--border);margin:14px 0;}
     <div class="modal-head"><div class="modal-title">+ New Store Item</div><button class="xbtn" id="close-modal-store">✕</button></div>
     <div class="field"><label>Item Name</label><input type="text" id="si-name" placeholder="e.g. VIP Badge"></div>
     <div class="field"><label>Description</label><textarea id="si-desc" placeholder="What does the user get?"></textarea></div>
-    <div class="field"><label>Price (⚡ electrons)</label><input type="number" id="si-price" value="50" min="1"></div>
+    <div class="field"><label>Base Price (⚡ electrons) — negative allowed</label><input type="number" id="si-price" value="50"></div>
     <div class="field"><label>Stock (-1 = unlimited)</label><input type="number" id="si-stock" value="-1"></div>
+    <div class="field"><label>Max units per user (-1 = no limit)</label><input type="number" id="si-maxlimit" value="-1"></div>
     <div id="si-err" class="err"></div>
     <button class="btn btn-yellow" id="btn-publish-item" style="width:100%;margin-top:12px">Add to Store</button>
   </div>
@@ -642,32 +643,38 @@ async function castVote(qid,opt){
 
 // ── RESOLVE (ADMIN) ────────────────────────────────
 async function resolveQ(qid,winningOpt,reward){
-  if(!confirm('Resolve: "'+winningOpt+'" is the winner? This will award +'+reward+' ⚡ to all correct voters.'))return;
   var q=QS.find(function(x){return x.id===qid;});
   if(!q){toast('Question not found','e');return;}
+
+  // Find winners
+  var winners=Object.entries(q.user_votes||{}).filter(function(kv){return kv[1]===winningOpt;}).map(function(kv){return kv[0];});
+  // Prize pool split equally
+  var prizeEach = winners.length>0 ? Math.floor(reward/winners.length) : 0;
+
+  if(!confirm('Resolve: "'+winningOpt+'" wins!\n'
+    +'Prize pool: '+reward+' ⚡\n'
+    +'Winners: '+winners.length+'\n'
+    +'Each winner gets: '+prizeEach+' ⚡\n\nProceed?'))return;
 
   // Mark question as resolved
   var r=await SB.from('questions').update({resolved_option:winningOpt,closed:true}).eq('id',qid);
   if(r.error){toast('Error resolving: '+r.error.message,'e');return;}
 
-  // Award electrons to all correct voters
-  var winners=Object.entries(q.user_votes||{}).filter(function(kv){return kv[1]===winningOpt;}).map(function(kv){return kv[0];});
   var awardedCount=0;
-  if(winners.length>0){
+  if(winners.length>0 && prizeEach>0){
     for(var i=0;i<winners.length;i++){
       var uid=winners[i];
-      // Use rpc to bypass RLS — increment balance atomically
-      var pr=await SB.from('profiles').select('balance,id').eq('id',uid).single();
+      var pr=await SB.from('profiles').select('balance').eq('id',uid).single();
       if(!pr.error&&pr.data){
-        var newBal=(pr.data.balance||0)+reward;
+        var newBal=(pr.data.balance||0)+prizeEach;
         var upd=await SB.from('profiles').update({balance:newBal}).eq('id',uid);
         if(!upd.error){ awardedCount++; }
-        else { toast('Could not award '+uid+': '+upd.error.message,'e'); }
+        else{ toast('Could not award user: '+upd.error.message,'e'); }
       }
     }
     await refreshBalance();
-    toast('✓ Resolved! '+awardedCount+'/'+winners.length+' winner'+(winners.length!==1?'s':'')+' awarded +'+reward+' ⚡','s');
-  }else{
+    toast('✓ Resolved! '+awardedCount+' winner'+(awardedCount!==1?'s':'')+' each get +'+prizeEach+' ⚡','s');
+  } else if(winners.length===0){
     toast('Resolved — no correct voters to award','i');
   }
 }
@@ -696,59 +703,97 @@ async function loadStore(){
   if(sbd)sbd.textContent='⚡ '+MY_BALANCE+' e-';
   var addBtn=document.getElementById('btn-add-item');
   if(addBtn)addBtn.style.display=ADMIN?'inline-flex':'none';
-
   var r=await SB.from('store_items').select('*').eq('active',true).order('created_at',{ascending:false});
   var grid=document.getElementById('store-grid');
   if(r.error||!r.data||!r.data.length){
     grid.innerHTML='<div class="empty"><div class="ico">🛒</div><h3>Store is empty</h3><p style="color:var(--gray)">Admin will add items soon!</p></div>';
     return;
   }
+  // Count how many of each item this user already bought
+  var myPurchases={};
+  var purR=await SB.from('purchases').select('item_id').eq('user_id',ME.id);
+  if(!purR.error&&purR.data){
+    purR.data.forEach(function(p){ myPurchases[p.item_id]=(myPurchases[p.item_id]||0)+1; });
+  }
   grid.innerHTML=r.data.map(function(item){
+    var basePrice=Math.abs(item.price||0);
     var outOfStock=item.stock===0;
-    var canAfford=MY_BALANCE>=item.price;
-    return '<div class="store-card'+(outOfStock?' out':'')+'">'
+    var maxLimit=(item.max_limit!=null)?item.max_limit:-1;
+    var myCount=myPurchases[item.id]||0;
+    var hitLimit=maxLimit!==-1&&myCount>=maxLimit;
+    var stockLabel=item.stock===-1?'Unlimited':(item.stock===0?'Out of stock':item.stock+' left');
+    var limitLabel=maxLimit===-1?'No user limit':('Max '+maxLimit+'/user · You own: '+myCount);
+    var canBuy=!outOfStock&&!hitLimit;
+    return '<div class="store-card'+((!canBuy)?' out':'')+'">'
       +'<div style="display:flex;align-items:center;justify-content:space-between">'
       +'<div class="store-item-name">'+item.name+'</div>'
-      +(ADMIN?'<button class="btn btn-ghost" onclick="deleteStoreItem(\''+item.id+'\')" style="font-size:11px;padding:3px 8px;color:var(--red);border-color:var(--red)">🗑</button>':'')
+      +(ADMIN?'<button class="btn btn-ghost del-store-btn" data-id="'+item.id+'" style="font-size:11px;padding:3px 8px;color:var(--red);border-color:var(--red)">🗑</button>':'')
       +'</div>'
       +'<div class="store-item-desc">'+(item.description||'')+'</div>'
-      +'<div class="store-item-footer">'
-      +'<div>'
-      +'<div class="store-item-price">'+item.price+' ⚡</div>'
-      +'<div class="store-item-stock">'+(item.stock===-1?'Unlimited stock':(item.stock===0?'Out of stock':item.stock+' left'))+'</div>'
+      +'<div style="font-size:11px;color:var(--gray);margin:4px 0">'+stockLabel+' · '+limitLabel+'</div>'
+      +'<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">'
+      +'<label style="font-family:var(--fh);font-size:11px;color:var(--gray);text-transform:uppercase;white-space:nowrap">Qty:</label>'
+      +'<input type="number" class="bal-input qty-input" id="qty-'+item.id+'" value="1" min="1" '
+        +(maxLimit!==-1?'max="'+(maxLimit-myCount)+'"':'')
+        +' style="width:70px" data-base="'+basePrice+'" data-id="'+item.id+'">'
+      +'<div style="font-family:var(--fh);font-weight:800;font-size:18px;color:var(--yellow)" id="total-'+item.id+'">'+basePrice+' ⚡</div>'
       +'</div>'
-      +(outOfStock
-        ?'<button class="btn btn-ghost" disabled style="opacity:.4">Out of Stock</button>'
-        :(canAfford
-          ?'<button class="btn btn-yellow" onclick="buyItem(\''+item.id+'\','+item.price+',\''+item.name.replace(/'/g,"\\'")+'\')" >Buy</button>'
-          :'<button class="btn btn-ghost" disabled style="opacity:.5">Need '+(item.price-MY_BALANCE)+' more ⚡</button>'
-        )
+      +'<div class="store-item-footer">'
+      +'<div class="store-item-price">'+basePrice+' ⚡ each</div>'
+      +(!canBuy
+        ?'<button class="btn btn-ghost" disabled style="opacity:.4">'+(outOfStock?'Out of Stock':'Limit reached')+'</button>'
+        :'<button class="btn btn-yellow buy-btn" data-id="'+item.id+'" data-base="'+basePrice+'" data-name="'+item.name.replace(/"/g,'&quot;')+'" data-stock="'+item.stock+'" data-maxlimit="'+maxLimit+'" data-mycount="'+myCount+'">Buy</button>'
       )
       +'</div></div>';
   }).join('');
+  // Live price calculation on qty change
+  grid.querySelectorAll('.qty-input').forEach(function(inp){
+    inp.addEventListener('input',function(){
+      var qty=Math.abs(parseInt(this.value)||1);
+      var base=Math.abs(parseInt(this.dataset.base)||0);
+      var el=document.getElementById('total-'+this.dataset.id);
+      if(el) el.textContent=(qty*base)+' ⚡';
+    });
+  });
+  // Buy buttons
+  grid.querySelectorAll('.buy-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){
+      var id=this.dataset.id;
+      var base=Math.abs(parseInt(this.dataset.base)||0);
+      var name=this.dataset.name;
+      var stock=parseInt(this.dataset.stock);
+      var maxLimit=parseInt(this.dataset.maxlimit);
+      var myCount=parseInt(this.dataset.mycount);
+      var qtyEl=document.getElementById('qty-'+id);
+      var qty=Math.abs(parseInt(qtyEl?qtyEl.value:1)||1);
+      buyItem(id,base,name,qty,stock,maxLimit,myCount);
+    });
+  });
+  // Admin delete
+  grid.querySelectorAll('.del-store-btn').forEach(function(btn){
+    btn.addEventListener('click',function(){ deleteStoreItem(this.dataset.id); });
+  });
 }
 
-async function buyItem(itemId,price,name){
-  if(MY_BALANCE<price){toast('Not enough electrons! Need '+price+' ⚡','e');return;}
-  if(!confirm('Buy "'+name+'" for '+price+' ⚡?'))return;
-
-  // Deduct balance
-  var newBal=MY_BALANCE-price;
+async function buyItem(itemId,basePrice,name,qty,stock,maxLimit,myCount){
+  var totalCost=Math.abs(qty)*Math.abs(basePrice);
+  if(MY_BALANCE<totalCost){toast('Need '+totalCost+' ⚡ ('+qty+' × '+basePrice+')','e');return;}
+  if(maxLimit!==-1&&(myCount+qty)>maxLimit){toast('Exceeds max limit of '+maxLimit+'/user (you own '+myCount+')','e');return;}
+  if(stock!==-1&&qty>stock){toast('Only '+stock+' in stock','e');return;}
+  if(!confirm('Buy '+qty+'× "'+name+'" for '+totalCost+' ⚡?\n('+qty+' × '+basePrice+' ⚡ each)'))return;
+  var newBal=MY_BALANCE-totalCost;
   var r1=await SB.from('profiles').update({balance:newBal}).eq('id',ME.id);
-  if(r1.error){toast('Error purchasing','e');return;}
-
-  // Record purchase
-  await SB.from('purchases').insert({user_id:ME.id,item_id:itemId,price_paid:price});
-
-  // Decrement stock if not unlimited
-  var itemR=await SB.from('store_items').select('stock').eq('id',itemId).single();
-  if(!itemR.error&&itemR.data&&itemR.data.stock>0){
-    await SB.from('store_items').update({stock:itemR.data.stock-1,active:itemR.data.stock-1>0}).eq('id',itemId);
+  if(r1.error){toast('Error: '+r1.error.message,'e');return;}
+  for(var i=0;i<qty;i++){
+    await SB.from('purchases').insert({user_id:ME.id,item_id:itemId,price_paid:basePrice});
   }
-
+  if(stock!==-1){
+    var newStock=stock-qty;
+    await SB.from('store_items').update({stock:newStock,active:newStock>0}).eq('id',itemId);
+  }
   MY_BALANCE=newBal;
   updateBalanceDisplays();
-  toast('🛒 Purchased: '+name+'! Enjoy!','s');
+  toast('🛒 Bought '+qty+'× '+name+' for '+totalCost+' ⚡!','s');
   loadStore();
 }
 
@@ -903,18 +948,26 @@ document.getElementById('btn-add-item').onclick=function(){document.getElementBy
 document.getElementById('btn-publish-item').onclick=async function(){
   var name=document.getElementById('si-name').value.trim();
   var desc=document.getElementById('si-desc').value.trim();
-  var price=parseInt(document.getElementById('si-price').value)||50;
+  var priceRaw=parseInt(document.getElementById('si-price').value);
+  if(isNaN(priceRaw))priceRaw=50;
+  var price=Math.abs(priceRaw); // store absolute value, negative allowed in UI
   var stock=parseInt(document.getElementById('si-stock').value);
   if(isNaN(stock))stock=-1;
+  var maxLimit=parseInt(document.getElementById('si-maxlimit').value);
+  if(isNaN(maxLimit))maxLimit=-1;
   var err=document.getElementById('si-err');err.style.display='none';
   if(!name){err.textContent='Please enter item name.';err.style.display='block';return;}
+  if(price<=0){err.textContent='Price must be non-zero.';err.style.display='block';return;}
   this.innerHTML='<span class="spin"></span>';this.disabled=true;
-  var r=await SB.from('store_items').insert({name:name,description:desc,price:price,stock:stock,active:true});
+  var r=await SB.from('store_items').insert({name:name,description:desc,price:price,stock:stock,max_limit:maxLimit,active:true});
   this.textContent='Add to Store';this.disabled=false;
   if(r.error){err.textContent=r.error.message;err.style.display='block';return;}
   document.getElementById('modal-store').classList.remove('open');
   document.getElementById('si-name').value='';
   document.getElementById('si-desc').value='';
+  document.getElementById('si-price').value='50';
+  document.getElementById('si-stock').value='-1';
+  document.getElementById('si-maxlimit').value='-1';
   toast('Item added to store!','s');
   loadStore();
 };
