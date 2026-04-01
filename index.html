@@ -805,17 +805,26 @@ async function loadAdminPanel(){
   var r=await SB.from('profiles').select('id,name,balance,is_admin').order('balance',{ascending:false});
   if(r.error||!r.data){el.innerHTML='<div class="empty"><div class="ico">❌</div><h3>Error loading users</h3></div>';return;}
   el.innerHTML=r.data.map(function(u){
-    return '<div class="user-bal-row">'
+    return '<div class="user-bal-row" data-uid="'+u.id+'">'
       +'<div class="user-bal-name">'+(u.name||'Unknown')+(u.is_admin?' <span class="adm">Admin</span>':'')+'</div>'
-      +'<div class="user-bal-current">'+u.balance+' ⚡</div>'
+      +'<div class="user-bal-current" id="bal-display-'+u.id+'">'+u.balance+' ⚡</div>'
       +'<input class="bal-input" type="number" value="'+u.balance+'" id="bal-'+u.id+'" min="0">'
       +'<div style="display:flex;gap:6px;flex-wrap:wrap">'
-      +'<button class="btn btn-yellow" onclick="setBalance(\'"+u.id+"\'  ,false)">Set</button>'
-      +'<button class="btn btn-green" onclick="addBalance(\'"+u.id+"\')">+ Add</button>'
-      +'<button class="btn btn-ghost" onclick="resetBalance(\'"+u.id+"\')">Reset 100</button>'
+      +'<button class="btn btn-yellow admin-set-btn" data-uid="'+u.id+'">Set</button>'
+      +'<button class="btn btn-green admin-add-btn" data-uid="'+u.id+'">+ Add</button>'
+      +'<button class="btn btn-ghost admin-reset-btn" data-uid="'+u.id+'">Reset 100</button>'
       +'</div>'
       +'</div>';
   }).join('');
+  el.querySelectorAll('.admin-set-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ setBalance(this.dataset.uid, false); });
+  });
+  el.querySelectorAll('.admin-add-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ addBalance(this.dataset.uid); });
+  });
+  el.querySelectorAll('.admin-reset-btn').forEach(function(btn){
+    btn.addEventListener('click', function(){ resetBalance(this.dataset.uid); });
+  });
 }
 
 async function setBalance(uid,silent){
