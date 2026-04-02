@@ -802,7 +802,12 @@ async function buyItem(itemId,basePrice,name,qty,stock,maxLimit,myCount){
 
 async function deleteStoreItem(itemId){
   if(!confirm('Remove this item from the store?'))return;
-  await SB.from('store_items').delete().eq('id',itemId);
+  var r=await SB.from('store_items').delete().eq('id',itemId);
+  if(r.error){
+    toast('Delete failed: '+r.error.message,'e');
+    console.error('Delete error:',r.error);
+    return;
+  }
   toast('Item removed','s');
   loadStore();
 }
