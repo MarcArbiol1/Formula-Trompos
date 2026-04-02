@@ -703,7 +703,10 @@ async function loadStore(){
   if(sbd)sbd.textContent='⚡ '+MY_BALANCE+' e-';
   var addBtn=document.getElementById('btn-add-item');
   if(addBtn)addBtn.style.display=ADMIN?'inline-flex':'none';
-  var r=await SB.from('store_items').select('*').eq('active',true).order('created_at',{ascending:false});
+  // Admin sees all items (including out of stock), users only see active ones
+  var query=SB.from('store_items').select('*').order('created_at',{ascending:false});
+  if(!ADMIN) query=query.eq('active',true);
+  var r=await query;
   var grid=document.getElementById('store-grid');
   if(r.error||!r.data||!r.data.length){
     grid.innerHTML='<div class="empty"><div class="ico">🛒</div><h3>Store is empty</h3><p style="color:var(--gray)">Admin will add items soon!</p></div>';
@@ -721,7 +724,7 @@ async function loadStore(){
     var maxLimit=(item.max_limit!=null)?item.max_limit:-1;
     var myCount=myPurchases[item.id]||0;
     var hitLimit=maxLimit!==-1&&myCount>=maxLimit;
-    var stockLabel=item.stock===-1?'Unlimited':(item.stock===0?'Out of stock':item.stock+' left');
+    var stockLabel=item.stock===-1?'Unlimited':(item.stock===0?'🔴 Out of stock':item.stock+' left');
     var limitLabel=maxLimit===-1?'No user limit':('Max '+maxLimit+'/user · You own: '+myCount);
     var canBuy=!outOfStock&&!hitLimit;
     return '<div class="store-card'+((!canBuy)?' out':'')+'">'
